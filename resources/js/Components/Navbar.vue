@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { CircleUser, Menu, UsersRound } from "lucide-vue-next";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, } from '@/shadcn/ui/sheet'
-import { Button } from "@/shadcn/ui/button";
+import {CircleUser, Menu, UsersRound} from "lucide-vue-next";
+import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,} from '@/shadcn/ui/sheet'
+import {Button} from "@/shadcn/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -10,14 +10,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/shadcn/ui/dropdown-menu'
-import { router } from "@inertiajs/vue3";
-import { useGlobalLoaderStrore } from "@/lib/GlobalLoaderStore";
-import { navigateLink } from "@/lib/utils";
+import {navigateLink} from "@/lib/utils";
 </script>
 
 <template>
 
-    <nav
+    <nav v-if="$attrs.auth?.users"
         class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
         <a
             href="#"
@@ -28,24 +26,28 @@ import { navigateLink } from "@/lib/utils";
         <a href="#" class="hover:text-foreground">
             Dashboard
         </a>
-        <a
-            href="#"
-            class="text-muted-foreground hover:text-foreground"
-        >
+        <a href="#"
+           class="text-muted-foreground hover:text-foreground">
             Presence
         </a>
-        <a
-            href="#"
-            class="text-muted-foreground hover:text-foreground"
-        >
+        <a href="#"
+           class="text-muted-foreground hover:text-foreground">
             Employee
         </a>
-        <a
-            href="#"
-            class="text-muted-foreground hover:text-foreground"
-        >
+        <a href="#"
+           class="text-muted-foreground hover:text-foreground">
             Management
         </a>
+    </nav>
+    <nav v-else
+        class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+        <a
+            href="#"
+            class="inline-flex items-center text-lg"
+        >
+            <UsersRound :stroke-width="2" class="size-6 text-black"/>
+        </a>
+        <a class="text-xl font-bold">Teamway</a>
     </nav>
     <Sheet>
         <SheetTrigger as-child>
