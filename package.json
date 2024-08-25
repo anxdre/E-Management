@@ -20,13 +20,17 @@
         "vue-tsc": "^2.0.24"
     },
     "dependencies": {
+        "@formkit/auto-animate": "^0.8.2",
         "@radix-icons/vue": "^1.0.0",
         "@vueuse/core": "^11.0.0",
+        "add": "^2.0.6",
         "class-variance-authority": "^0.7.0",
         "clsx": "^2.1.1",
+        "form": "^0.2.4",
         "lucide-vue-next": "^0.428.0",
         "pinia": "^2.2.2",
         "radix-vue": "^1.9.4",
+        "shadcn-vue": "^0.10.5",
         "tailwind-merge": "^2.5.2",
         "tailwindcss-animate": "^1.0.7"
     }

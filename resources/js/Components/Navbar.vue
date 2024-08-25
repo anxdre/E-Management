@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleUser, Menu, Package2 } from "lucide-vue-next";
+import { CircleUser, Menu, UsersRound } from "lucide-vue-next";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, } from '@/shadcn/ui/sheet'
 import { Button } from "@/shadcn/ui/button";
 import {
@@ -10,7 +10,9 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/shadcn/ui/dropdown-menu'
-import {UsersRound} from "lucide-vue-next";
+import { router } from "@inertiajs/vue3";
+import { useGlobalLoaderStrore } from "@/lib/GlobalLoaderStore";
+import { navigateLink } from "@/lib/utils";
 </script>
 
 <template>
@@ -93,11 +95,15 @@ import {UsersRound} from "lucide-vue-next";
                     </a>
                 </nav>
             </div>
-            <div class="flex flex-row  items-center w-full mb-8 py-4 px-4 gap-4 bg-primary hover:bg-gray-800">
-                <div  size="icon" class="bg-white p-1 rounded-full">
+            <div @click="navigateLink(route('auth.sign-in'))"
+                 class="flex flex-row cursor-pointer  items-center w-full mb-8 py-4 px-4 gap-4 bg-primary hover:bg-gray-800">
+                <div size="icon" class="bg-white p-1 rounded-full">
                     <CircleUser class="h-5 w-5"/>
                 </div>
-                <span v-if="$attrs.auth?.user" class="font-semibold text-primary-foreground">{{$attrs.auth?.user?.first_name + $attrs.auth?.user?.last_name}}</span>
+                <span v-if="$attrs.auth?.user"
+                      class="font-semibold text-primary-foreground">{{
+                        $attrs.auth?.user?.first_name + $attrs.auth?.user?.last_name
+                    }}</span>
                 <span v-else class="font-semibold text-primary-foreground">Sign In</span>
             </div>
         </SheetContent>
@@ -123,7 +129,10 @@ import {UsersRound} from "lucide-vue-next";
     </div>
     <div v-else
          class="flex flex-row w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
-        <Button>Sign In</Button>
+        <Button
+            @click="navigateLink(route('auth.sign-in'))">
+            Sign In
+        </Button>
     </div>
 </template>
 

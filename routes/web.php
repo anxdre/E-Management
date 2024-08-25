@@ -7,7 +7,7 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Landing/LandingPage');
-});
+})->name('home');
 
 //Route::get('/dashboard', function () {
 //    return Inertia::render('Dashboard');
