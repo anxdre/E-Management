@@ -1,8 +1,11 @@
 <script setup lang="ts">
 
-import { Label } from "@/shadcn/ui/label";
-import { Input } from "@/shadcn/ui/input";
-import { Button } from "@/shadcn/ui/button";
+import {Label} from "@/shadcn/ui/label";
+import {Input} from "@/shadcn/ui/input";
+import {Button} from "@/shadcn/ui/button";
+import {toTypedSchema} from "@vee-validate/zod";
+import {z} from "zod";
+
 </script>
 
 <template>
@@ -26,7 +29,8 @@ import { Button } from "@/shadcn/ui/button";
                     Forgot your password?
                 </a>
             </div>
-            <Input id="password" type="password" placeholder="enter password min 8 character" autocomplete="current-password" required/>
+            <Input id="password" type="password" placeholder="enter password min 8 character"
+                   autocomplete="current-password" required/>
         </div>
         <Button type="submit" class="w-full">
             Sign In
