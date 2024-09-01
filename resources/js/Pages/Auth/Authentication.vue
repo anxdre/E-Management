@@ -1,17 +1,23 @@
 <script setup lang="ts">
-import { ChevronLeft } from "lucide-vue-next";
-import { navigateLink } from "@/lib/utils";
-import { ref } from "vue";
-import { vAutoAnimate } from "@formkit/auto-animate";
+import {ChevronLeft} from "lucide-vue-next";
+import {navigateLink} from "@/lib/utils";
+import {ref} from "vue";
+import {vAutoAnimate} from "@formkit/auto-animate";
 import FormSignUp from "@/Pages/Auth/FormSignUp.vue";
 import FormSignIn from "@/Pages/Auth/FormSignIn.vue";
-import { Head } from "@inertiajs/vue3";
+import {Head} from "@inertiajs/vue3";
+import {Toaster} from "@/shadcn/ui/toast";
 
 const isSignUp = ref(false)
+
+function signInUser() {
+
+}
 </script>
 
 <template>
-    <Head>{{isSignUp ? 'Sign Up' : 'Sign In'}}</Head>
+    <Head>{{ isSignUp ? 'Sign Up' : 'Sign In' }}</Head>
+    <Toaster />
     <div class="w-full lg:grid lg:grid-cols-2 min-h-screen" v-auto-animate>
         <div v-if="!isSignUp" class="flex items-center justify-center py-12">
             <div class="mx-4 md:mx-auto grid w-[350px] gap-6">
@@ -63,7 +69,7 @@ const isSignUp = ref(false)
                     </p>
                 </div>
                 <div class="grid gap-4">
-                    <FormSignUp/>
+                    <FormSignUp @registered="isSignUp=false"/>
                 </div>
                 <div class="mt-4 text-center text-sm">
                     Already have an account?

@@ -6,9 +6,13 @@ import {FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/shadcn
 import {useForm} from "vee-validate";
 import {vAutoAnimate} from "@formkit/auto-animate";
 import {toTypedSchema} from "@vee-validate/zod";
-import {toRaw} from "vue";
+import {router} from "@inertiajs/vue3";
+import {toast} from "@/shadcn/ui/toast";
+import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
 
-
+const emit = defineEmits<{
+    registered: [value: boolean]
+}>()
 const phoneRegex = new RegExp(
     /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
 );
@@ -29,10 +33,10 @@ const formSchema = toTypedSchema(z.object({
             return transformedValue;
         }),
     password: z.string({required_error: "must be filled"}).min(8),
-    re_password: z.string({required_error: "must be filled"}).min(8)
-}).refine((values) => values.password === values.re_password, {
+    password_confirmation: z.string({required_error: "must be filled"}).min(8)
+}).refine((values) => values.password === values.password_confirmation, {
     message: "Password didn't match",
-    path: ['password', 're_password']
+    path: ['password', 'password_confirmation']
 }))
 
 
@@ -42,8 +46,29 @@ const {handleSubmit, isFieldDirty, setErrors, setFieldValue, values} = useForm({
 })
 
 const onSubmit = handleSubmit((values) => {
-    console.log('Form submitted!', values)
+    router.post(route('auth.sign-up'), values, {
+        onSuccess: () => {
+            emit('registered', true)
+            toast({
+                title: 'Success sign up',
+                description: 'please check your email to verify your account',
+                duration: 3000
+            })
+        },
+        onError: (err) => {
+            setErrors(err)
+        },
+        onBefore: () => {
+            useGlobalLoaderStrore().isLoading = true
+            useGlobalLoaderStrore().darkenBg = true
+        },
+        onFinish: () => {
+            useGlobalLoaderStrore().isLoading = false
+            useGlobalLoaderStrore().darkenBg = false
+        }
+    })
 })
+
 </script>
 
 <template>
@@ -123,7 +148,7 @@ const onSubmit = handleSubmit((values) => {
             </FormItem>
         </FormField>
 
-        <FormField name="re_password" :validate-on-blur="!isFieldDirty" v-slot="{ componentField }">
+        <FormField name="password_confirmation" :validate-on-blur="!isFieldDirty" v-slot="{ componentField }">
             <FormItem v-auto-animate>
                 <FormLabel>Re - type password</FormLabel>
                 <FormControl>
@@ -138,7 +163,7 @@ const onSubmit = handleSubmit((values) => {
             </FormItem>
         </FormField>
 
-        <Button @click="console.log(toRaw(values))" type="submit" class="w-full">
+        <Button type="submit" class="w-full">
             Sign Up
         </Button>
     </form>

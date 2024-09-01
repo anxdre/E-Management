@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\EmailController;
+
 return [
 
     /*
@@ -51,7 +53,8 @@ return [
 
     'web' => [
         /** @inject web **/
-        \App\Http\Controllers\AuthController::class
+        \App\Http\Controllers\AuthController::class,
+        EmailController::class,
     ],
     'api' => [
         /** @inject api **/

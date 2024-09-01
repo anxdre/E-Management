@@ -1,37 +1,81 @@
 <script setup lang="ts">
 
-import {Label} from "@/shadcn/ui/label";
 import {Input} from "@/shadcn/ui/input";
 import {Button} from "@/shadcn/ui/button";
 import {toTypedSchema} from "@vee-validate/zod";
 import {z} from "zod";
+import {FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/shadcn/ui/form";
+import {useForm} from "vee-validate";
+import {vAutoAnimate} from "@formkit/auto-animate";
+import {router} from "@inertiajs/vue3";
+import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
 
+
+const formSchema = toTypedSchema(z.object({
+    email: z.string({required_error: "must be filled"}),
+    password: z.string({required_error: "must be filled"}).min(8),
+}))
+
+//vee-validate init
+const {handleSubmit, isFieldDirty, setErrors, setFieldValue, values} = useForm({
+    validationSchema: formSchema
+})
+
+const onSubmit = handleSubmit((values) => {
+    router.post(route('auth.sign-in'), values, {
+        onError: (err) => {
+            setErrors(err)
+        },
+        onBefore: () => {
+            useGlobalLoaderStrore().isLoading = true
+            useGlobalLoaderStrore().darkenBg = true
+        },
+        onFinish: () => {
+            useGlobalLoaderStrore().isLoading = false
+            useGlobalLoaderStrore().darkenBg = false
+        }
+    })
+})
 </script>
 
 <template>
-    <form class="space-y-4">
-        <div class="grid gap-2">
-            <Label for="email">Email</Label>
-            <Input
-                id="email"
-                type="email"
-                placeholder="enter your email company"
-                required
-            />
-        </div>
-        <div class="grid gap-2">
-            <div class="flex items-center">
-                <Label for="password">Password</Label>
-                <a
-                    href="/forgot-password"
-                    class="ml-auto inline-block text-sm underline"
-                >
-                    Forgot your password?
-                </a>
-            </div>
-            <Input id="password" type="password" placeholder="enter password min 8 character"
-                   autocomplete="current-password" required/>
-        </div>
+    <form class="space-y-4" @submit.prevent="onSubmit">
+        <FormField name="email" :validate-on-blur="!isFieldDirty" v-slot="{ componentField }">
+            <FormItem v-auto-animate>
+                <FormLabel>Email Address</FormLabel>
+                <FormControl>
+                    <Input
+                        v-bind="componentField"
+                        type="email"
+                        autocomplete="email"
+                        placeholder="enter your email company"
+                    />
+                </FormControl>
+                <FormMessage/>
+            </FormItem>
+        </FormField>
+
+        <FormField name="password" :validate-on-blur="!isFieldDirty" v-slot="{ componentField }">
+            <FormItem v-auto-animate>
+                <FormLabel class="inline-flex justify-between w-full items-center">Password
+                    <a
+                        href="/forgot-password"
+                        class="ml-auto inline-block text-sm underline"
+                    >
+                        Forgot your password?
+                    </a></FormLabel>
+                <FormControl>
+                    <Input
+                        v-bind="componentField"
+                        type="password"
+                        placeholder="enter password min 8 character"
+                        autocomplete="current-password"
+                    />
+                </FormControl>
+                <FormMessage/>
+            </FormItem>
+        </FormField>
+
         <Button type="submit" class="w-full">
             Sign In
         </Button>

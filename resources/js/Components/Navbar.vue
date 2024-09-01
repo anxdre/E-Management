@@ -11,11 +11,11 @@ import {
     DropdownMenuTrigger,
 } from '@/shadcn/ui/dropdown-menu'
 import {navigateLink} from "@/lib/utils";
+import {router} from "@inertiajs/vue3";
 </script>
 
 <template>
-
-    <nav v-if="$attrs.auth?.users"
+    <nav v-if="$attrs.auth?.user != undefined || null"
         class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
         <a
             href="#"
@@ -110,7 +110,7 @@ import {navigateLink} from "@/lib/utils";
             </div>
         </SheetContent>
     </Sheet>
-    <div v-if="$attrs.auth?.user"
+    <div v-if="$attrs.auth?.user != undefined || null"
          class="flex flex-row w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
         <DropdownMenu>
             <DropdownMenuTrigger as-child>
@@ -125,7 +125,7 @@ import {navigateLink} from "@/lib/utils";
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem>Support</DropdownMenuItem>
                 <DropdownMenuSeparator/>
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem @click="router.post(route('auth.sign-out'))">Logout</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     </div>

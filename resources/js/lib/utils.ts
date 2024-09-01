@@ -1,7 +1,7 @@
-import { type ClassValue, clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
-import { router } from "@inertiajs/vue3";
-import { useGlobalLoaderStrore } from "@/lib/GlobalLoaderStore";
+import {type ClassValue, clsx} from 'clsx'
+import {twMerge} from 'tailwind-merge'
+import {router} from "@inertiajs/vue3";
+import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
@@ -14,15 +14,16 @@ export function getImageUrl(path: string) {
 }
 
 export function navigateLink(route: any, data?: any, options?: any) {
-    router.get(route,data, {
+    router.get(route, data, {
         ...options,
         onBefore: () => {
             useGlobalLoaderStrore().isLoading = true
             useGlobalLoaderStrore().darkenBg = true
         },
-        onFinish: () =>{
+        onFinish: () => {
             useGlobalLoaderStrore().isLoading = false
             useGlobalLoaderStrore().darkenBg = false
         }
     })
 }
+
