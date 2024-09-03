@@ -9,6 +9,8 @@ import {useForm} from "vee-validate";
 import {vAutoAnimate} from "@formkit/auto-animate";
 import {router} from "@inertiajs/vue3";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
+import {navigateLink} from "@/lib/utils";
+import {toast} from "@/shadcn/ui/toast";
 
 
 const formSchema = toTypedSchema(z.object({
@@ -58,12 +60,11 @@ const onSubmit = handleSubmit((values) => {
         <FormField name="password" :validate-on-blur="!isFieldDirty" v-slot="{ componentField }">
             <FormItem v-auto-animate>
                 <FormLabel class="inline-flex justify-between w-full items-center">Password
-                    <a
-                        href="/forgot-password"
-                        class="ml-auto inline-block text-sm underline"
-                    >
+                    <span @click="navigateLink(route('password.forgot'))"
+                          class="ml-auto inline-block text-sm underline cursor-pointer">
                         Forgot your password?
-                    </a></FormLabel>
+                    </span>
+                </FormLabel>
                 <FormControl>
                     <Input
                         v-bind="componentField"

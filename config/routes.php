@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmailController;
+use App\Http\Controllers\PasswordController;
 
 return [
 
@@ -53,8 +55,10 @@ return [
 
     'web' => [
         /** @inject web **/
-        \App\Http\Controllers\AuthController::class,
+//        authentication
+        AuthController::class,
         EmailController::class,
+        PasswordController::class
     ],
     'api' => [
         /** @inject api **/

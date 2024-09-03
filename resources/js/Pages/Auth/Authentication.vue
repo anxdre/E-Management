@@ -9,10 +9,6 @@ import {Head} from "@inertiajs/vue3";
 import {Toaster} from "@/shadcn/ui/toast";
 
 const isSignUp = ref(false)
-
-function signInUser() {
-
-}
 </script>
 
 <template>

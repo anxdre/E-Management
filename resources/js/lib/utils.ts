@@ -2,6 +2,7 @@ import {type ClassValue, clsx} from 'clsx'
 import {twMerge} from 'tailwind-merge'
 import {router} from "@inertiajs/vue3";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
+import {useToast} from "@/shadcn/ui/toast";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
@@ -14,6 +15,7 @@ export function getImageUrl(path: string) {
 }
 
 export function navigateLink(route: any, data?: any, options?: any) {
+    useToast().dismiss()
     router.get(route, data, {
         ...options,
         onBefore: () => {
