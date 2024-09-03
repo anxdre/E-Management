@@ -20,6 +20,8 @@ class EmailController extends Controller
     public function verifyEmail(EmailVerificationRequest $request)
     {
         $request->fulfill();
+        $request->user()->status = 'active';
+        $request->user()->save();
         return Inertia::render('Auth/SuccessVerifyEmail', []);
     }
 

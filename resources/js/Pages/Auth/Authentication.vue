@@ -7,12 +7,14 @@ import FormSignUp from "@/Pages/Auth/FormSignUp.vue";
 import FormSignIn from "@/Pages/Auth/FormSignIn.vue";
 import {Head} from "@inertiajs/vue3";
 import {Toaster} from "@/shadcn/ui/toast";
+import CustomLoader from "@/Components/CustomLoader.vue";
 
 const isSignUp = ref(false)
 </script>
 
 <template>
     <Head>{{ isSignUp ? 'Sign Up' : 'Sign In' }}</Head>
+    <CustomLoader/>
     <Toaster />
     <div class="w-full lg:grid lg:grid-cols-2 min-h-screen" v-auto-animate>
         <div v-if="!isSignUp" class="flex items-center justify-center py-12">
