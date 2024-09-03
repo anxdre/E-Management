@@ -15,6 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('phone')->unique();
+            $table->string('username')->nullable()->unique();
+            $table->string('picture_profile')->nullable();
+            $table->string('type');
+            $table->unsignedBigInteger('account_detail_id');
+            $table->enum('status',['active','suspended','disabled'])->default('suspended');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

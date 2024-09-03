@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { CircleUser, Menu, Package2 } from "lucide-vue-next";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, } from '@/shadcn/ui/sheet'
-import { Button } from "@/shadcn/ui/button";
+import {CircleUser, Menu, UsersRound} from "lucide-vue-next";
+import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,} from '@/shadcn/ui/sheet'
+import {Button} from "@/shadcn/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -10,12 +10,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/shadcn/ui/dropdown-menu'
-import {UsersRound} from "lucide-vue-next";
+import {navigateLink} from "@/lib/utils";
+import {router} from "@inertiajs/vue3";
 </script>
 
 <template>
-
-    <nav
+    <nav v-if="$attrs.auth?.user != undefined || null"
         class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
         <a
             href="#"
@@ -26,24 +26,28 @@ import {UsersRound} from "lucide-vue-next";
         <a href="#" class="hover:text-foreground">
             Dashboard
         </a>
-        <a
-            href="#"
-            class="text-muted-foreground hover:text-foreground"
-        >
+        <a href="#"
+           class="text-muted-foreground hover:text-foreground">
             Presence
         </a>
-        <a
-            href="#"
-            class="text-muted-foreground hover:text-foreground"
-        >
+        <a href="#"
+           class="text-muted-foreground hover:text-foreground">
             Employee
         </a>
-        <a
-            href="#"
-            class="text-muted-foreground hover:text-foreground"
-        >
+        <a href="#"
+           class="text-muted-foreground hover:text-foreground">
             Management
         </a>
+    </nav>
+    <nav v-else
+        class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+        <a
+            href="#"
+            class="inline-flex items-center text-lg"
+        >
+            <UsersRound :stroke-width="2" class="size-6 text-black"/>
+        </a>
+        <a class="text-xl font-bold">Teamway</a>
     </nav>
     <Sheet>
         <SheetTrigger as-child>
@@ -93,16 +97,20 @@ import {UsersRound} from "lucide-vue-next";
                     </a>
                 </nav>
             </div>
-            <div class="flex flex-row  items-center w-full mb-8 py-4 px-4 gap-4 bg-primary hover:bg-gray-800">
-                <div  size="icon" class="bg-white p-1 rounded-full">
+            <div @click="navigateLink(route('auth.sign-in'))"
+                 class="flex flex-row cursor-pointer  items-center w-full mb-8 py-4 px-4 gap-4 bg-primary hover:bg-gray-800">
+                <div size="icon" class="bg-white p-1 rounded-full">
                     <CircleUser class="h-5 w-5"/>
                 </div>
-                <span v-if="$attrs.auth?.user" class="font-semibold text-primary-foreground">{{$attrs.auth?.user?.first_name + $attrs.auth?.user?.last_name}}</span>
+                <span v-if="$attrs.auth?.user"
+                      class="font-semibold text-primary-foreground">{{
+                        $attrs.auth?.user?.first_name + $attrs.auth?.user?.last_name
+                    }}</span>
                 <span v-else class="font-semibold text-primary-foreground">Sign In</span>
             </div>
         </SheetContent>
     </Sheet>
-    <div v-if="$attrs.auth?.user"
+    <div v-if="$attrs.auth?.user != undefined || null"
          class="flex flex-row w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
         <DropdownMenu>
             <DropdownMenuTrigger as-child>
@@ -117,13 +125,16 @@ import {UsersRound} from "lucide-vue-next";
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem>Support</DropdownMenuItem>
                 <DropdownMenuSeparator/>
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem @click="router.post(route('auth.sign-out'))">Logout</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     </div>
     <div v-else
          class="flex flex-row w-full items-center justify-end gap-4 md:ml-auto md:gap-2 lg:gap-4">
-        <Button>Sign In</Button>
+        <Button
+            @click="navigateLink(route('auth.sign-in'))">
+            Sign In
+        </Button>
     </div>
 </template>
 
