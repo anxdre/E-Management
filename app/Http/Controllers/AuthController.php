@@ -35,7 +35,8 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('home', absolute: false));
+        return Inertia::location(route('filament.company.pages.dashboard'));
+
     }
 
     #[Post('/sign-out', name: '.sign-out')]

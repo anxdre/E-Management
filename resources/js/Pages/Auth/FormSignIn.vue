@@ -10,7 +10,6 @@ import {vAutoAnimate} from "@formkit/auto-animate";
 import {router} from "@inertiajs/vue3";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
 import {navigateLink} from "@/lib/utils";
-import {toast} from "@/shadcn/ui/toast";
 
 
 const formSchema = toTypedSchema(z.object({

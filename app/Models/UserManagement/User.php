@@ -51,4 +51,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
         ];
     }
+
+    function userDetail()
+    {
+        return $this->belongsTo(UserDetail::class, 'account_detail_id','id');
+    }
 }

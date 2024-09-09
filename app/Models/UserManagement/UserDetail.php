@@ -10,4 +10,9 @@ class UserDetail extends Model
     protected $table = 'user_details';
     protected $guarded = ['id'];
     use HasFactory;
+
+    function userGroup()
+    {
+        return $this->belongsTo(UserGroup::class, 'group_id');
+    }
 }
