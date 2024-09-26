@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {CircleUser, Menu, UsersRound} from "lucide-vue-next";
-import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,} from '@/shadcn/ui/sheet'
-import {Button} from "@/shadcn/ui/button";
+import { CircleUser, Menu, UsersRound,UserRound } from "lucide-vue-next";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, } from '@/shadcn/ui/sheet'
+import { Button } from "@/shadcn/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -10,37 +10,118 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/shadcn/ui/dropdown-menu'
-import {navigateLink} from "@/lib/utils";
-import {router} from "@inertiajs/vue3";
+import { navigateLink } from "@/lib/utils";
+import { router } from "@inertiajs/vue3";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/shadcn/ui/accordion'
+import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
 </script>
 
 <template>
     <nav v-if="$attrs.auth?.user != undefined || null"
-        class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+         class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
         <a
             href="#"
             class="inline-flex items-center text-lg"
         >
             <UsersRound :stroke-width="2" class="size-6 text-black"/>
         </a>
-        <a href="#" class="hover:text-foreground">
+        <Button @click="navigateLink(route('dashboard.index'))"
+                :variant="$page.url.startsWith('/Dashboard') ? 'default':'ghost'"
+                class="hover:text-foreground">
             Dashboard
-        </a>
-        <a href="#"
-           class="text-muted-foreground hover:text-foreground">
-            Presence
-        </a>
-        <a href="#"
-           class="text-muted-foreground hover:text-foreground">
-            Employee
-        </a>
-        <a href="#"
-           class="text-muted-foreground hover:text-foreground">
-            Management
-        </a>
+        </Button>
+        <div class="inline-flex h-fit">
+            <Popover>
+                <PopoverTrigger>
+                    <Button :variant="$page.url.startsWith('/Presence') ? 'default':'ghost'"
+                            class="hover:text-foreground">
+                        Presence
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent class="space-y-2 px-0 py-1">
+                    <ul>
+                        <Button @click="navigateLink(route('dashboard.index'))"
+                                variant="ghost"
+                                class="hover:text-foreground justify-start w-full rounded">
+                            Dashboard
+                        </Button>
+                    </ul>
+                    <ul>
+                        <Button @click="navigateLink(route('dashboard.index'))"
+                                variant="ghost"
+                                class="hover:text-foreground justify-start w-full rounded">
+                            Dashboard
+                        </Button>
+                    </ul>
+                    <ul>
+                        <Button @click="navigateLink(route('dashboard.index'))"
+                                variant="ghost"
+                                class="hover:text-foreground justify-start w-full rounded">
+                            Dashboard
+                        </Button>
+                    </ul>
+                </PopoverContent>
+            </Popover>
+        </div>
+        <div class="inline-flex h-fit">
+            <Popover>
+                <PopoverTrigger>
+                    <Button :variant="$page.url.startsWith('/Employee') ? 'default':'ghost'"
+                            class="hover:text-foreground">
+                        Employee
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent class="space-y-2 px-0 py-1 w-fit">
+                    <ul>
+                        <Button @click="navigateLink(route('employee-group.index'))"
+                                variant="ghost"
+                                class="hover:text-foreground gap-2 justify-start w-full rounded">
+                            <UsersRound size="18"/>
+                            Employee Group
+                        </Button>
+                    </ul>
+                    <ul>
+                        <Button @click="navigateLink(route('dashboard.index'))"
+                                variant="ghost"
+                                class="hover:text-foreground gap-2 justify-start w-full rounded">
+                            <UserRound size="18"/>
+                            Employee Account
+                        </Button>
+                    </ul>
+                </PopoverContent>
+            </Popover>
+        </div>
+        <div class="inline-flex h-fit">
+            <Popover>
+                <PopoverTrigger>
+                    <Button :variant="$page.url.startsWith('/Management') ? 'default':'ghost'"
+                            class="hover:text-foreground">
+                        Management
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent class="space-y-2 px-0 py-1 w-fit">
+                    <ul>
+                        <Button @click="navigateLink(route('employee-group.index'))"
+                                variant="ghost"
+                                class="hover:text-foreground gap-2 justify-start w-full rounded">
+                            <UsersRound size="18"/>
+                            Employee Group
+                        </Button>
+                    </ul>
+                    <ul>
+                        <Button @click="navigateLink(route('dashboard.index'))"
+                                variant="ghost"
+                                class="hover:text-foreground gap-2 justify-start w-full rounded">
+                            <UserRound size="18"/>
+                            Employee Account
+                        </Button>
+                    </ul>
+                </PopoverContent>
+            </Popover>
+        </div>
     </nav>
     <nav v-else
-        class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+         class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
         <a
             href="#"
             class="inline-flex items-center text-lg"
@@ -60,7 +141,7 @@ import {router} from "@inertiajs/vue3";
                 <span class="sr-only">Toggle navigation menu</span>
             </Button>
         </SheetTrigger>
-        <SheetContent class="h-full p-0 justify-between flex flex-col" side="left">
+        <SheetContent class="h-full p-0 justify-between flex flex-col overflow-y-scroll" side="left">
             <div>
                 <SheetHeader>
                     <SheetTitle/>
@@ -74,27 +155,107 @@ import {router} from "@inertiajs/vue3";
                         <UsersRound :stroke-width="2" class="size-6"/>
                         <span>E-Management</span>
                     </a>
-                    <a href="#" class="hover:text-foreground">
+                    <Button @click="navigateLink(route('dashboard.index'))"
+                            :variant="$page.url.startsWith('/Dashboard') ? 'default':'ghost'"
+                            class="hover:text-foreground justify-start">
                         Dashboard
-                    </a>
-                    <a
-                        href="#"
-                        class="text-muted-foreground hover:text-foreground"
-                    >
-                        Presence
-                    </a>
-                    <a
-                        href="#"
-                        class="text-muted-foreground hover:text-foreground"
-                    >
-                        Employee
-                    </a>
-                    <a
-                        href="#"
-                        class="text-muted-foreground hover:text-foreground"
-                    >
-                        Management
-                    </a>
+                    </Button>
+                    <Accordion type="single" collapsible>
+                        <AccordionItem value="item-1">
+                            <AccordionTrigger
+                                :class="{'text-white font-semibold bg-primary':$page.url.startsWith('/Presence')}"
+                                class="py-2 px-4 rounded-md">
+                                Presence
+                            </AccordionTrigger>
+                            <AccordionContent class="space-y-4 w-full p-4">
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+                    <Accordion type="single" collapsible>
+                        <AccordionItem value="item-1">
+                            <AccordionTrigger
+                                :class="{'text-white font-semibold bg-primary':$page.url.startsWith('/Employee')}"
+                                class="py-2 px-4 rounded-md">
+                                Employee
+                            </AccordionTrigger>
+                            <AccordionContent class="space-y-4 w-full p-4">
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+                    <Accordion type="single" collapsible>
+                        <AccordionItem value="item-1">
+                            <AccordionTrigger
+                                :class="{'text-white font-semibold bg-primary':$page.url.startsWith('/Management')}"
+                                class="py-2 px-4 rounded-md">
+                                Management
+                            </AccordionTrigger>
+                            <AccordionContent class="space-y-4 w-full p-4">
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                                <ul>
+                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground justify-start w-full">
+                                        Dashboard
+                                    </Button>
+                                </ul>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
                 </nav>
             </div>
             <div @click="navigateLink(route('auth.sign-in'))"

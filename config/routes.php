@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailController;
+use App\Http\Controllers\Employee\EmployeeAccountController;
+use App\Http\Controllers\Employee\EmployeeGroupController;
 use App\Http\Controllers\PasswordController;
 
 return [
@@ -58,7 +61,10 @@ return [
 //        authentication
         AuthController::class,
         EmailController::class,
-        PasswordController::class
+        PasswordController::class,
+        DashboardController::class,
+        EmployeeAccountController::class,
+        EmployeeGroupController::class
     ],
     'api' => [
         /** @inject api **/

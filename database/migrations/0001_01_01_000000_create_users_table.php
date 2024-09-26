@@ -4,26 +4,44 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
+        Schema::create('user_details', function (Blueprint $table) {
+            $table->id();
+            $table->string('fullname');
+            $table->string('phone')->unique();
+            $table->string('picture_profile')->nullable();
+            $table->string('address');
+            $table->timestamps();
+        });
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
             $table->string('email')->unique();
-            $table->string('phone')->unique();
-            $table->string('username')->nullable()->unique();
-            $table->string('picture_profile')->nullable();
-            $table->string('type');
-            $table->unsignedBigInteger('account_detail_id');
-            $table->enum('status',['active','suspended','disabled'])->default('suspended');
+            $table->foreignId('user_detail_id')->constrained('user_details')->cascadeOnDelete();
+            $table->boolean('is_suspended')->default(false);
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->enum('type', ['employee', 'company']);
             $table->rememberToken();
+            $table->timestamps();
+        });
+
+        Schema::create('company_groups', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+        Schema::create('group_has_users', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('group_id')->constrained('company_groups')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->timestamps();
         });
 

@@ -17,16 +17,8 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'phone',
-        'username',
-        'password',
-        'picture_profile',
-        'type',
-        'account_detail_id',
-        'status',
+    protected $guarded = [
+        'id','remember_token',
     ];
 
     /**
@@ -54,6 +46,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
     function userDetail()
     {
-        return $this->belongsTo(UserDetail::class, 'account_detail_id','id');
+        return $this->hasOne(UserDetail::class, 'user_detail_id','id');
+    }
+
+    function groups()
+    {
+        return $this->belongsToMany(CompanyGroup::class, 'user_groups', 'user_id', 'group_id');
     }
 }

@@ -11,8 +11,7 @@ class UserDetail extends Model
     protected $guarded = ['id'];
     use HasFactory;
 
-    function userGroup()
-    {
-        return $this->belongsTo(UserGroup::class, 'group_id');
+    public function user(){
+        return $this->belongsTo(User::class);
     }
 }

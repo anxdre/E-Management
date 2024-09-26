@@ -4,7 +4,6 @@ import Navbar from "@/Components/Navbar.vue";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
 import {Toaster} from "@/shadcn/ui/toast";
 import {router} from "@inertiajs/vue3";
-
 const loader = useGlobalLoaderStrore()
 </script>
 

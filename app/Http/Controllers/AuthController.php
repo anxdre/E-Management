@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\UserManagement\CompanyDetail;
+use App\Models\UserManagement\UserDetail;
 use App\Models\UserManagement\User;
 use Dentro\Yalr\Attributes\Get;
 use Dentro\Yalr\Attributes\Name;
 use Dentro\Yalr\Attributes\Post;
 use Dentro\Yalr\Attributes\Prefix;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -35,7 +35,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return Inertia::location(route('filament.company.pages.dashboard'));
+        return redirect()->route('dashboard.index');
 
     }
 
@@ -57,24 +57,24 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
-            'phone' => 'required|min:10|unique:' . User::class,
+            'phone' => 'required|min:10|unique:' . UserDetail::class,
             'address' => 'required|string|lowercase|max:255',
             'password' => ['required','confirmed', Password::defaults()],
         ]);
 
         DB::beginTransaction();
         try {
-            $companyDetail = CompanyDetail::query()->create([
-                'name' => $request->name,
-                'address' => $request->address
+            $companyDetail = UserDetail::query()->create([
+                'fullname' => $request->name,
+                'address' => $request->address,
+                'phone' => $request->phone,
             ]);
 
             $user = User::query()->create(['name' => $request->name,
                 'email' => $request->email,
-                'phone' => $request->phone,
                 'password' => Hash::make($request->password),
-                'account_detail_id' => $companyDetail->id,
-                'type' => CompanyDetail::class]);
+                'user_detail_id' => $companyDetail->id,
+                'type' => 'company']);
             DB::commit();
         }catch (\Exception $exception){
             DB::rollBack();
