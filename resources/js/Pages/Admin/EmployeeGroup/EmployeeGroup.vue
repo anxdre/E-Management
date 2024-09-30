@@ -28,6 +28,16 @@ import axios from "axios";
 import { errorToast, PaginationOption, successToast } from "@/lib/utils";
 import { debounceFilter, watchPausable } from "@vueuse/core";
 import { Input } from "@/shadcn/ui/input";
+import EditEmployee from "@/Pages/Admin/EmployeeGroup/EditEmployee.vue";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from "@/shadcn/ui/dialog";
 
 defineOptions({
     layout: LayoutWrapper
@@ -90,6 +100,28 @@ const dialogState = reactive(new CrudDialogAdapter())
     <main class="grid flex-1 items-start gap-4 p-4 sm:px-6 md:gap-4">
         <CreateEmployee @successCreated="getDataset()" :errors="$attrs.errors"
                         v-model:is-showing="dialogState.show.state"/>
+        <EditEmployee @successUpdated="getDataset()" :dataset="dialogState.update.data"
+                      v-model:is-showing="dialogState.update.state"
+                      :errors="$attrs.errors"/>
+        <Dialog v-model:open="dialogState.delete.state">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delete {{dialogState.delete.data.name}} Group</DialogTitle>
+                    <DialogDescription>
+                        After deletion, all of employee in this group will be still remaining,
+                       <br> Are you sure to perform this action ? deleted data cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <DialogClose as-child>
+                        <Button type="button" variant="secondary">
+                            Close
+                        </Button>
+                    </DialogClose>
+                    <Button @click="deleteItem(dialogState.delete.data.id)">Delete</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         <Card>
             <CardHeader>
                 <CardTitle>Company Group</CardTitle>
@@ -155,8 +187,13 @@ const dialogState = reactive(new CrudDialogAdapter())
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        <DropdownMenuItem class="cursor-pointer">Edit</DropdownMenuItem>
-                                        <DropdownMenuItem @click="deleteItem(group.id)" class="cursor-pointer">Delete
+                                        <DropdownMenuItem
+                                            @click="()=>{dialogState.update.data = group;dialogState.update.state = true}"
+                                            class="cursor-pointer">Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            @click="dialogState.delete.data = group;dialogState.delete.state = true"
+                                            class="cursor-pointer">Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

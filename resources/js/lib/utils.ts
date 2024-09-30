@@ -14,6 +14,10 @@ export function getImageUrl(path: string) {
     return new URL('../../../img/' + path, import.meta.url).href
 }
 
+export function extractError(errors: any) {
+    return Object.values(errors).join('\n')
+}
+
 export function navigateLink(route: any, data?: any, options?: any) {
     useToast().dismiss()
     router.get(route, data, {

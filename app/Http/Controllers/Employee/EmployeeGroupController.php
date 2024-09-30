@@ -12,6 +12,7 @@ use Dentro\Yalr\Attributes\Middleware;
 use Dentro\Yalr\Attributes\Name;
 use Dentro\Yalr\Attributes\Post;
 use Dentro\Yalr\Attributes\Prefix;
+use Dentro\Yalr\Attributes\Put;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -56,6 +57,19 @@ class EmployeeGroupController extends Controller
         ]);
 
         return new JsonBody(null, message: 'Group added successfully');
+    }
+
+    #[Put('/update/json', '.json.update')]
+    public function updateGroup(Request $request)
+    {
+        $request->validate(['name' => 'required|string',
+            'id' => 'required|numeric|exists:company_groups,id']);
+
+        CompanyGroup::query()->find($request->get('id'))->update([
+            'name' => $request->get('name')
+        ]);
+
+        return new JsonBody(null, message: 'Group updated successfully');
     }
 
     #[Delete('/delete/json', '.json.delete')]
