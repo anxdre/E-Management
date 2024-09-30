@@ -30,10 +30,10 @@ class EmployeeGroupController extends Controller
     public function getAllEmployeeGroup(request $request)
     {
         $data = CompanyGroup::query()
-            ->when($request->has('search'), function ($query) use ($request) {
-                $query->orWhere('name', 'like', "%$request->search%");
-            })
             ->where('user_id', Auth::id())
+            ->when($request->has('search'), function ($query) use ($request) {
+                $query->where('name', 'like', "%$request->search%");
+            })
             ->paginate(10)
             ->withQueryString();
 

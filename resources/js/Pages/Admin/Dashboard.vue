@@ -5,7 +5,7 @@ import { Button } from '@/shadcn/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shadcn/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shadcn/ui/table'
 import { Activity, ArrowUpRight, CircleUser, CreditCard, DollarSign, Menu, Package2, Search, Users } from 'lucide-vue-next'
-import { Avatar } from "@/shadcn/ui/avatar";
+import { Avatar,AvatarImage,AvatarFallback } from "@/shadcn/ui/avatar";
 
 defineOptions({
     layout: LayoutWrapper

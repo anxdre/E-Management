@@ -18,6 +18,10 @@ export function extractError(errors: any) {
     return Object.values(errors).join('\n')
 }
 
+export const PhoneRegex = new RegExp(
+    /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
+);
+
 export function navigateLink(route: any, data?: any, options?: any) {
     useToast().dismiss()
     router.get(route, data, {

@@ -9,20 +9,18 @@ import {toTypedSchema} from "@vee-validate/zod";
 import {router} from "@inertiajs/vue3";
 import {toast} from "@/shadcn/ui/toast";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
+import { PhoneRegex } from "@/lib/utils";
 
 const emit = defineEmits<{
     registered: [value: boolean]
 }>()
-const phoneRegex = new RegExp(
-    /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
-);
 
 const formSchema = toTypedSchema(z.object({
     name: z.string({required_error: "must be filled"}),
     email: z.string({required_error: "must be filled"}),
     address: z.string({required_error: "must be filled"}),
     phone: z.string({required_error: "must be filled"}).min(8, "8 digit required")
-        .regex(phoneRegex, 'wrong phone number format')
+        .regex(PhoneRegex, 'wrong phone number format')
         .transform(value => {
             // Menghapus karakter +, -, dan spasi
             let transformedValue = value.replace(/[+\-\s]/g, '');

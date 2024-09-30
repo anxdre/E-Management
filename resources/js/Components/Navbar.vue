@@ -81,7 +81,7 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                         </Button>
                     </ul>
                     <ul>
-                        <Button @click="navigateLink(route('dashboard.index'))"
+                        <Button @click="navigateLink(route('employee-account.index'))"
                                 variant="ghost"
                                 class="hover:text-foreground gap-2 justify-start w-full rounded">
                             <UserRound size="18"/>
@@ -109,7 +109,7 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                         </Button>
                     </ul>
                     <ul>
-                        <Button @click="navigateLink(route('dashboard.index'))"
+                        <Button @click="navigateLink(route('employee-account.index'))"
                                 variant="ghost"
                                 class="hover:text-foreground gap-2 justify-start w-full rounded">
                             <UserRound size="18"/>

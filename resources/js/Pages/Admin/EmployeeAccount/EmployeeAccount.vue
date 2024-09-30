@@ -21,12 +21,14 @@ import {
     DropdownMenuTrigger
 } from '@/shadcn/ui/dropdown-menu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/shadcn/ui/table'
+import CreateEmployee from "@/Pages/Admin/EmployeeGroup/CreateEmployee.vue";
 import { CrudDialogAdapter } from "@/lib/DialogState/CrudDialogAdapter";
 import { onMounted, reactive, ref } from "vue";
 import axios from "axios";
-import { errorToast, PaginationOption, successToast } from "@/lib/utils";
+import { errorToast, navigateLink, PaginationOption, successToast } from "@/lib/utils";
 import { debounceFilter, watchPausable } from "@vueuse/core";
 import { Input } from "@/shadcn/ui/input";
+import EditEmployee from "@/Pages/Admin/EmployeeGroup/EditEmployee.vue";
 import {
     Dialog,
     DialogClose,
@@ -36,8 +38,8 @@ import {
     DialogHeader,
     DialogTitle
 } from "@/shadcn/ui/dialog";
-import CreateGroup from "@/Pages/Admin/EmployeeGroup/CreateGroup.vue";
-import EditGroup from "@/Pages/Admin/EmployeeGroup/EditGroup.vue";
+import CreateAccount from "@/Pages/Admin/EmployeeAccount/CreateAccount.vue";
+import EditAccount from "@/Pages/Admin/EmployeeAccount/EditAccount.vue";
 
 defineOptions({
     layout: LayoutWrapper
@@ -56,7 +58,7 @@ const paginationWatcher = watchPausable(
 function getDataset(page: number) {
     paginationWatcher.pause()
     isLoading.value = true
-    axios.get(route('employee-group.json.all', { page: page, search: paginateControl.searchQuery }))
+    axios.get(route('employee-account.json.all', { page: page, search: paginateControl.searchQuery }))
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
             dataset.value = dataFromServer.data
             paginateControl.currentPage = dataFromServer.current_page
@@ -98,15 +100,15 @@ const dialogState = reactive(new CrudDialogAdapter())
 
 <template>
     <main class="grid flex-1 items-start gap-4 p-4 sm:px-6 md:gap-4">
-        <CreateGroup @successCreated="getDataset()" :errors="$attrs.errors"
-                     v-model:is-showing="dialogState.show.state"/>
-        <EditGroup @successUpdated="getDataset()" :dataset="dialogState.update.data"
-                   v-model:is-showing="dialogState.update.state"
-                   :errors="$attrs.errors"/>
+        <CreateAccount @successCreated="getDataset()" :errors="$attrs.errors"
+                        v-model:is-showing="dialogState.show.state"/>
+        <EditAccount @successUpdated="getDataset()" :dataset="dialogState.update.data"
+                      v-model:is-showing="dialogState.update.state"
+                      :errors="$attrs.errors"/>
         <Dialog v-model:open="dialogState.delete.state">
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete {{ dialogState.delete.data.name }} Group</DialogTitle>
+                    <DialogTitle>Delete {{dialogState.delete.data.name}} Group</DialogTitle>
                     <DialogDescription>
                         After deletion, all of employee in this group will be still remaining,
                         <br> Are you sure to perform this action ? deleted data cannot be undone.
@@ -124,14 +126,14 @@ const dialogState = reactive(new CrudDialogAdapter())
         </Dialog>
         <Card>
             <CardHeader>
-                <CardTitle>Company Group</CardTitle>
+                <CardTitle>Company Account</CardTitle>
                 <CardDescription class="inline-flex justify-between items-center">
-                    Manage your employee group and view their related account.
+                    Manage your employee account and view their related information.
                     <div class="ml-auto flex items-center gap-2">
                         <Button @click="dialogState.show.state = true" size="sm" class="h-7 gap-1 bg-black">
                             <PlusCircle class="h-3.5 w-3.5"/>
                             <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                  Add Employee Group
+                  Add Employee Account
                 </span>
                         </Button>
                     </div>
@@ -161,16 +163,16 @@ const dialogState = reactive(new CrudDialogAdapter())
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow v-for="(group,index) in dataset" :key="group.id">
+                        <TableRow v-for="(account,index) in dataset" :key="account.id">
                             <TableCell class="hidden sm:table-cell text-center">
                                 {{ index + 1 }}
                             </TableCell>
                             <TableCell class="font-medium">
-                                {{ group.name }}
+                                {{ account.name }}
                             </TableCell>
                             <TableCell class="text-center">
                                 <Badge variant="outline">
-                                    {{ group.total_employee }}
+                                    {{ account.total_employee }}
                                 </Badge>
                             </TableCell>
                             <TableCell>
@@ -188,11 +190,15 @@ const dialogState = reactive(new CrudDialogAdapter())
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         <DropdownMenuItem
-                                            @click="()=>{dialogState.update.data = group;dialogState.update.state = true}"
+                                            @click="()=>{navigateLink(route('employee-account.detail',{id:account.id}))}"
+                                            class="cursor-pointer">View Account
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            @click="()=>{dialogState.update.data = account;dialogState.update.state = true}"
                                             class="cursor-pointer">Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            @click="dialogState.delete.data = group;dialogState.delete.state = true"
+                                            @click="dialogState.delete.data = account;dialogState.delete.state = true"
                                             class="cursor-pointer">Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
