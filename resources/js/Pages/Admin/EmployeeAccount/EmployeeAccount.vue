@@ -158,7 +158,7 @@ const dialogState = reactive(new CrudDialogAdapter())
                             <TableHead>Full Name</TableHead>
                             <TableHead>Phone Number</TableHead>
                             <TableHead>Address</TableHead>
-                            <TableHead class="hidden w-[100px] sm:table-cell text-center">Account Status</TableHead>
+                            <TableHead class="hidden w-[100px] sm:table-cell text-center text-nowrap">Account Status</TableHead>
                             <TableHead class="text-center">
                                 Action
                             </TableHead>
@@ -235,7 +235,7 @@ const dialogState = reactive(new CrudDialogAdapter())
                     <div class="text-xs text-muted-foreground">
                         Showing <strong>{{ paginateControl.from }}-{{ paginateControl.to }}</strong> of
                         <strong>{{ paginateControl.totalData }}</strong>
-                        group
+                        account
                     </div>
                     <div class="text-xs text-muted-foreground grid grid-flow-col space-x-4">
                         <Button @click="()=>paginateControl.currentPage--" v-if="paginateControl.prevPageUrl"

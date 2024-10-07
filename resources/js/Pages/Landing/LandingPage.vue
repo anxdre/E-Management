@@ -4,10 +4,22 @@ import { Head } from '@inertiajs/vue3'
 import { Button } from "@/shadcn/ui/button";
 import { ChevronsRight, Gauge, UsersRound } from "lucide-vue-next";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shadcn/ui/card";
+import { ref } from "vue";
+import { cn } from "@/lib/utils";
 
 defineOptions({
     layout: LayoutWrapper
 })
+
+const hoverState = ref(1)
+const focussedCard = cn('scale-95 bg-white text-black')
+
+setInterval(()=>{
+    if (hoverState.value === 5){
+        hoverState.value = 0
+    }
+    hoverState.value++
+},3500)
 </script>
 
 <template>
@@ -35,7 +47,8 @@ defineOptions({
                 <div class="flex flex-col-reverse gap-4 lg:gap-0 lg:grid grid-cols-4 lg:space-x-2">
                     <div class="col-span-1">
                         <Card
-                            class="bg-black h-full text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000">
+                            class="bg-black h-full text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000"
+                            :class="hoverState == 1 && focussedCard">
                             <card-header>
                                 <CardTitle>Blazingly Fast</CardTitle>
                                 <CardDescription>
@@ -52,7 +65,8 @@ defineOptions({
                     </div>
                     <div class="col-span-3">
                         <Card
-                            class="w-full p-4 h-full bg-black text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000">
+                            class="w-full p-4 h-full bg-black text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000"
+                            :class="hoverState == 4 && focussedCard">
                             <div class="flex flex-col-reverse lg:flex lg:flex-row w-full gap-4 h-full items-center">
                                 <div class="flex-col flex w-full justify-center h-full mr-3">
                                     <h3 class="w-full lg:text-end ">Maximize your productivity</h3>
@@ -70,7 +84,8 @@ defineOptions({
                 <div class="flex flex-col gap-4 lg:gap-0 lg:grid grid-cols-4 lg:space-x-2">
                     <div class="col-span-2">
                         <Card
-                            class="bg-black h-full text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000">
+                            class="bg-black h-full text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000"
+                            :class="hoverState == 2 && focussedCard">
                             <card-header>
                                 <CardTitle>Blazingly Fast</CardTitle>
                                 <CardDescription>
@@ -87,7 +102,8 @@ defineOptions({
                     </div>
                     <div class="col-span-1">
                         <Card
-                            class="bg-black text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000">
+                            class="bg-black text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000"
+                            :class="hoverState == 5 && focussedCard">
                             <card-header>
                                 <CardTitle>Blazingly Fast</CardTitle>
                                 <CardDescription>
@@ -104,7 +120,8 @@ defineOptions({
                     </div>
                     <div class="col-span-1">
                         <Card
-                            class="bg-black text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000">
+                            class="bg-black text-white border-0 shadow-lg hover:scale-95 hover:bg-white hover:text-black transition-all duration-1000"
+                            :class="hoverState == 3 && focussedCard">
                             <card-header>
                                 <CardTitle>Blazingly Fast</CardTitle>
                                 <CardDescription>
