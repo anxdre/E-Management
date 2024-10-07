@@ -51,6 +51,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     function groups()
     {
-        return $this->belongsToMany(CompanyGroup::class, 'user_groups', 'user_id', 'group_id');
+        return $this->belongsToMany(CompanyGroup::class, 'group_has_users', 'user_id', 'group_id');
     }
 }

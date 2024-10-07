@@ -99,7 +99,7 @@ const dialogState = reactive(new CrudDialogAdapter())
 </script>
 
 <template>
-    <main class="grid flex-1 items-start gap-4 p-4 sm:px-6 md:gap-4">
+    <main class="flex-1 items-start gap-4 p-4 sm:px-6 md:gap-4">
         <CreateAccount @successCreated="getDataset()" :errors="$attrs.errors"
                         v-model:is-showing="dialogState.show.state"/>
         <EditAccount @successUpdated="getDataset()" :dataset="dialogState.update.data"
@@ -108,9 +108,9 @@ const dialogState = reactive(new CrudDialogAdapter())
         <Dialog v-model:open="dialogState.delete.state">
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete {{dialogState.delete.data.name}} Group</DialogTitle>
+                    <DialogTitle>Delete {{dialogState.delete.data.name}} Employee</DialogTitle>
                     <DialogDescription>
-                        After deletion, all of employee in this group will be still remaining,
+                        After deletion, all data of this employee  will be still deleted,
                         <br> Are you sure to perform this action ? deleted data cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
@@ -130,7 +130,7 @@ const dialogState = reactive(new CrudDialogAdapter())
                 <CardDescription class="inline-flex justify-between items-center">
                     Manage your employee account and view their related information.
                     <div class="ml-auto flex items-center gap-2">
-                        <Button @click="dialogState.show.state = true" size="sm" class="h-7 gap-1 bg-black">
+                        <Button @click="navigateLink(route('employee-account.create'))" size="sm" class="h-7 gap-1 bg-black">
                             <PlusCircle class="h-3.5 w-3.5"/>
                             <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">
                   Add Employee Account
@@ -149,15 +149,17 @@ const dialogState = reactive(new CrudDialogAdapter())
                 </div>
             </CardHeader>
             <CardContent>
-                <Table class="relative">
+                <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead class="hidden w-[100px] sm:table-cell text-center">
                                 No
                             </TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead class="text-center">Assigned Employee</TableHead>
-                            <TableHead>
+                            <TableHead>Full Name</TableHead>
+                            <TableHead>Phone Number</TableHead>
+                            <TableHead>Address</TableHead>
+                            <TableHead class="hidden w-[100px] sm:table-cell text-center">Account Status</TableHead>
+                            <TableHead class="text-center">
                                 Action
                             </TableHead>
                         </TableRow>
@@ -168,14 +170,23 @@ const dialogState = reactive(new CrudDialogAdapter())
                                 {{ index + 1 }}
                             </TableCell>
                             <TableCell class="font-medium">
-                                {{ account.name }}
+                                {{ account.user_detail?.fullname ?? '-' }}
                             </TableCell>
-                            <TableCell class="text-center">
-                                <Badge variant="outline">
-                                    {{ account.total_employee }}
+                            <TableCell class="font-medium text-ellipsis overflow-ellipsis">
+                                {{ account.user_detail?.phone ?? '-' }}
+                            </TableCell>
+                            <TableCell class="font-medium">
+                                {{ account.user_detail?.address ?? '-' }}
+                            </TableCell>
+                            <TableCell class="hidden sm:table-cell text-center">
+                                <Badge v-if="!account.is_suspended" variant="success">
+                                    Active
+                                </Badge>
+                                <Badge v-else variant="destructive">
+                                    Suspended
                                 </Badge>
                             </TableCell>
-                            <TableCell>
+                            <TableCell  class="text-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger as-child>
                                         <Button
@@ -192,10 +203,6 @@ const dialogState = reactive(new CrudDialogAdapter())
                                         <DropdownMenuItem
                                             @click="()=>{navigateLink(route('employee-account.detail',{id:account.id}))}"
                                             class="cursor-pointer">View Account
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            @click="()=>{dialogState.update.data = account;dialogState.update.state = true}"
-                                            class="cursor-pointer">Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             @click="dialogState.delete.data = account;dialogState.delete.state = true"

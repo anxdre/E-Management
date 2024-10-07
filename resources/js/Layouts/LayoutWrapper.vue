@@ -23,7 +23,7 @@ const loader = useGlobalLoaderStrore()
             <LoaderCircle :stroke-width="2.5" :size="64" class="animate-spin text-primary-foreground/80"/>
             <p class="text-primary-foreground/80 animate-pulse">Loading</p>
         </div>
-        <transition name="fade">
+        <transition mode="out-in" name="fade">
             <div :key="$page.component">
                 <slot/>
             </div>
