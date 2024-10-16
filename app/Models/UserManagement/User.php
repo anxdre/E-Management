@@ -3,6 +3,7 @@
 namespace App\Models\UserManagement;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\PresenceManagement\PresenceEmployee;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -52,5 +53,9 @@ class User extends Authenticatable implements MustVerifyEmail
     function groups()
     {
         return $this->belongsToMany(CompanyGroup::class, 'group_has_users', 'user_id', 'group_id');
+    }
+
+    function presence(){
+        return $this->hasMany(PresenceEmployee::class, 'user_id', 'id');
     }
 }

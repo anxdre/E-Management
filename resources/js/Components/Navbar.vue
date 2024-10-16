@@ -40,10 +40,10 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                 </PopoverTrigger>
                 <PopoverContent class="space-y-2 px-0 py-1">
                     <ul>
-                        <Button @click="navigateLink(route('dashboard.index'))"
+                        <Button @click="navigateLink(route('presence-location.index'))"
                                 variant="ghost"
                                 class="hover:text-foreground justify-start w-full rounded">
-                            Dashboard
+                            Presence Location
                         </Button>
                     </ul>
                     <ul>
@@ -163,6 +163,7 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                     <Accordion type="single" collapsible>
                         <AccordionItem value="item-1">
                             <AccordionTrigger
+                                @click="navigateLink(route('presence-location.index'))"
                                 :class="{'text-white font-semibold bg-primary':$page.url.startsWith('/Presence')}"
                                 class="py-2 px-4 rounded-md">
                                 Presence
