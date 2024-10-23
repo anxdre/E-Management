@@ -18,4 +18,10 @@ class PresenceLocationController extends Controller
     {
         return Inertia::render('Admin/PresenceLocation/PresenceLocation');
     }
+
+    #[Get('/create', '.create')]
+    public function detailIndex()
+    {
+        return Inertia::render('Admin/PresenceLocation/PresenceLocationDetail');
+    }
 }

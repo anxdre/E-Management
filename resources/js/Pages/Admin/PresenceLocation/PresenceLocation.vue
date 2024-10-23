@@ -118,7 +118,7 @@ const dialogState = reactive(new CrudDialogAdapter())
                 <CardDescription class="inline-flex justify-between items-center">
                     Manage your presence location and view their related information.
                     <div class="ml-auto flex items-center gap-2">
-                        <Button @click="navigateLink(route('employee-account.create'))" size="sm"
+                        <Button @click="navigateLink(route('presence-location.create'))" size="sm"
                                 class="h-7 gap-1 bg-black">
                             <PlusCircle class="h-3.5 w-3.5"/>
                             <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">

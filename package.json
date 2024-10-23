@@ -22,14 +22,19 @@
     "dependencies": {
         "@formkit/auto-animate": "^0.8.2",
         "@radix-icons/vue": "^1.0.0",
+        "@tomtom-international/web-sdk-maps": "^6.25.0",
+        "@tomtom-international/web-sdk-services": "^6.25.0",
         "@vee-validate/zod": "^4.13.2",
+        "@vue-leaflet/vue-leaflet": "^0.10.1",
         "@vueuse/core": "^11.1.0",
         "add": "^2.0.6",
         "class-variance-authority": "^0.7.0",
         "clsx": "^2.1.1",
         "form": "^0.2.4",
         "i": "^0.3.7",
+        "leaflet": "^1.9.4",
         "lucide-vue-next": "^0.428.0",
+        "mapbox-gl": "^3.7.0",
         "pinia": "^2.2.2",
         "radix-vue": "^1.9.4",
         "shadcn-vue": "^0.10.5",
@@ -37,6 +42,7 @@
         "tailwindcss-animate": "^1.0.7",
         "tooltip": "^1.6.1",
         "vee-validate": "^4.13.2",
+        "vue3-google-map": "^0.21.0",
         "zod": "^3.23.8"
     }
 }
