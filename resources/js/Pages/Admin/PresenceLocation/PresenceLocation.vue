@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import LayoutWrapper from "@/Layouts/LayoutWrapper.vue";
-import { ArrowLeftCircle, ArrowRightCircle, MoreHorizontal, PlusCircle, Search, TriangleAlert,MapPinHouse } from 'lucide-vue-next'
-import { Button } from '@/shadcn/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shadcn/ui/card'
-import { CrudDialogAdapter } from "@/lib/DialogState/CrudDialogAdapter";
-import { onMounted, reactive, ref } from "vue";
+import {ArrowLeftCircle, ArrowRightCircle, MapPinHouse, PlusCircle, Search, TriangleAlert} from 'lucide-vue-next'
+import {Button} from '@/shadcn/ui/button'
+import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from '@/shadcn/ui/card'
+import {CrudDialogAdapter} from "@/lib/DialogState/CrudDialogAdapter";
+import {onMounted, reactive, ref} from "vue";
 import axios from "axios";
-import { errorToast, navigateLink, PaginationOption, successToast } from "@/lib/utils";
-import { debounceFilter, watchPausable } from "@vueuse/core";
-import { Input } from "@/shadcn/ui/input";
+import {errorToast, navigateLink, PaginationOption, successToast} from "@/lib/utils";
+import {debounceFilter, watchPausable} from "@vueuse/core";
+import {Input} from "@/shadcn/ui/input";
 import {
     Dialog,
     DialogClose,
@@ -16,38 +16,35 @@ import {
     DialogDescription,
     DialogFooter,
     DialogHeader,
-    DialogTitle
+    DialogTitle,
+    DialogTrigger
 } from "@/shadcn/ui/dialog";
-import CreateAccount from "@/Pages/Admin/EmployeeAccount/CreateAccount.vue";
-import EditAccount from "@/Pages/Admin/EmployeeAccount/EditAccount.vue";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuTrigger
-} from "@/shadcn/ui/dropdown-menu";
-import { ScrollArea } from "@/shadcn/ui/scroll-area";
+import {Link} from "@inertiajs/vue3";
+import CustomLink from "@/Components/CustomLink.vue";
 
 defineOptions({
     layout: LayoutWrapper
 })
 
-const dataset = ref()
+const dataset = ref([])
+const selectedData = ref()
 const isLoading = ref(false)
 const paginateControl = reactive(new PaginationOption())
 const paginationWatcher = watchPausable(
     paginateControl,
     (value) => {
-        getDataset(paginateControl.currentPage)
-    }, { eventFilter: debounceFilter(800) }
+        getDataset()
+    }, {eventFilter: debounceFilter(800)}
 )
 
-function getDataset(page: number) {
+function getDataset() {
     paginationWatcher.pause()
     isLoading.value = true
-    axios.get(route('employee-account.json.all', { page: page, search: paginateControl.searchQuery }))
-        .then(({ data: { data: dataFromServer, message, status_code } }) => {
+    axios.get(route('presence-location.json.all', {
+        page: paginateControl.currentPage,
+        search: paginateControl.searchQuery
+    }))
+        .then(({data: {data: dataFromServer, message, status_code}}) => {
             dataset.value = dataFromServer.data
             paginateControl.currentPage = dataFromServer.current_page
             paginateControl.nextPageUrl = dataFromServer.next_page_url
@@ -67,10 +64,10 @@ function getDataset(page: number) {
 }
 
 function deleteItem(dataId: number) {
-    axios.delete(route('employee-group.json.delete'), { data: { data_id: dataId } })
-        .then(({ data: { data: dataFromServer, message, status_code } }) => {
+    axios.delete(route('presence-location.json.delete'), {data: {data_id: dataId}})
+        .then(({data: {data: dataFromServer, message, status_code}}) => {
             successToast('Success', message)
-            getDataset(paginateControl.currentPage)
+            getDataset()
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)
@@ -88,30 +85,6 @@ const dialogState = reactive(new CrudDialogAdapter())
 
 <template>
     <main class="flex-1 items-start gap-4 p-4 sm:px-6 md:gap-4">
-        <CreateAccount @successCreated="getDataset()" :errors="$attrs.errors"
-                       v-model:is-showing="dialogState.show.state"/>
-        <EditAccount @successUpdated="getDataset()" :dataset="dialogState.update.data"
-                     v-model:is-showing="dialogState.update.state"
-                     :errors="$attrs.errors"/>
-        <Dialog v-model:open="dialogState.delete.state">
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Delete {{ dialogState.delete.data.name }} Location</DialogTitle>
-                    <DialogDescription>
-                        After deletion, all data related (employee presence) of this location will be deleted,
-                        <br> Are you sure to perform this action ? deleted data cannot be undone.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                    <DialogClose as-child>
-                        <Button type="button" variant="secondary">
-                            Close
-                        </Button>
-                    </DialogClose>
-                    <Button @click="deleteItem(dialogState.delete.data.id)">Delete</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
         <Card>
             <CardHeader>
                 <CardTitle>Presence Location</CardTitle>
@@ -137,30 +110,50 @@ const dialogState = reactive(new CrudDialogAdapter())
                     />
                 </div>
             </CardHeader>
-            <CardContent class="space-y-4">
-                <ScrollArea class="h-[800px] w-full rounded-md border p-4">
-                <Card class="p-4 m-2">
+            <CardContent class="h-full max-h-screen overflow-y-scroll">
+                <Dialog v-if="dataset.length > 0">
+                    <DialogTrigger class="gap-4 grid grid-flow-row md:grid-cols-3 p-4" as="div">
+                        <Card v-for="data in dataset" :key="data.id" @click="selectedData = data"
+                              class="p-4 cursor-pointer hover:bg-black/10 hover:outline hover:outline-black/20 w-full">
+                            <div class="inline-flex gap-2 items-center text-lg w-full justify-between">
+                                <div class="gap-4 flex flex-col items-center text-center text-lg w-full font-semibold">
+                                    <MapPinHouse class="w-full max-h-20 h-full text-black stroke-1 stroke-primary"/>
+                                    {{ data.name }}
+                                </div>
+                            </div>
+                        </Card>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>
+                                Action
+                            </DialogTitle>
+                            <DialogDescription>
+                                <CustomLink  :href="route('presence-location.detail',{id:selectedData.id})"><Button>Manage Employee</Button></CustomLink>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <DialogClose as-child>
+                                <Button type="button" variant="secondary">
+                                    Close
+                                </Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+                <Card v-else class="p-4 m-2">
                     <div class="inline-flex gap-2 items-center text-lg w-full justify-center">
                         <TriangleAlert class="text-destructive animate-pulse"/>
                         Tidak ada data
                     </div>
                 </Card>
-                <Card class="p-4 m-2 cursor-pointer hover:bg-black/10 hover:outline hover:outline-black/20">
-                    <div class="inline-flex gap-2 items-center text-lg w-full justify-between">
-                        <div class="inline-flex gap-4 items-center text-lg w-full font-semibold">
-                            <MapPinHouse class="text-black"/>
-                            Next Avenue
-                        </div>
-                    </div>
-                </Card>
-                </ScrollArea>
             </CardContent>
             <CardFooter>
                 <div class="justify-between md:inline-flex md:space-y-0 space-y-2 w-full">
                     <div class="text-xs text-muted-foreground">
                         Showing <strong>{{ paginateControl.from }}-{{ paginateControl.to }}</strong> of
                         <strong>{{ paginateControl.totalData }}</strong>
-                        account
+                        location
                     </div>
                     <div class="text-xs text-muted-foreground grid grid-flow-col space-x-4">
                         <Button @click="()=>paginateControl.currentPage--" v-if="paginateControl.prevPageUrl"

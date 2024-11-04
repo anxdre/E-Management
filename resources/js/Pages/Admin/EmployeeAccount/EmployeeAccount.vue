@@ -55,7 +55,7 @@ const paginationWatcher = watchPausable(
     }, { eventFilter: debounceFilter(800) }
 )
 
-function getDataset(page: number) {
+function getDataset(page?: number) {
     paginationWatcher.pause()
     isLoading.value = true
     axios.get(route('employee-account.json.all', { page: page, search: paginateControl.searchQuery }))
