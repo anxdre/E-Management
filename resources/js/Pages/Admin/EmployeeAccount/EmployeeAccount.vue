@@ -21,14 +21,12 @@ import {
     DropdownMenuTrigger
 } from '@/shadcn/ui/dropdown-menu'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/shadcn/ui/table'
-import CreateEmployee from "@/Pages/Admin/EmployeeGroup/CreateEmployee.vue";
 import { CrudDialogAdapter } from "@/lib/DialogState/CrudDialogAdapter";
 import { onMounted, reactive, ref } from "vue";
 import axios from "axios";
 import { errorToast, navigateLink, PaginationOption, successToast } from "@/lib/utils";
 import { debounceFilter, watchPausable } from "@vueuse/core";
 import { Input } from "@/shadcn/ui/input";
-import EditEmployee from "@/Pages/Admin/EmployeeGroup/EditEmployee.vue";
 import {
     Dialog,
     DialogClose,
@@ -101,16 +99,16 @@ const dialogState = reactive(new CrudDialogAdapter())
 <template>
     <main class="flex-1 items-start gap-4 p-4 sm:px-6 md:gap-4">
         <CreateAccount @successCreated="getDataset()" :errors="$attrs.errors"
-                        v-model:is-showing="dialogState.show.state"/>
+                       v-model:is-showing="dialogState.show.state"/>
         <EditAccount @successUpdated="getDataset()" :dataset="dialogState.update.data"
-                      v-model:is-showing="dialogState.update.state"
-                      :errors="$attrs.errors"/>
+                     v-model:is-showing="dialogState.update.state"
+                     :errors="$attrs.errors"/>
         <Dialog v-model:open="dialogState.delete.state">
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete {{dialogState.delete.data.name}} Employee</DialogTitle>
+                    <DialogTitle>Delete {{ dialogState.delete.data.name }} Employee</DialogTitle>
                     <DialogDescription>
-                        After deletion, all data of this employee  will be still deleted,
+                        After deletion, all data of this employee will be still deleted,
                         <br> Are you sure to perform this action ? deleted data cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
@@ -130,7 +128,8 @@ const dialogState = reactive(new CrudDialogAdapter())
                 <CardDescription class="inline-flex justify-between items-center">
                     Manage your employee account and view their related information.
                     <div class="ml-auto flex items-center gap-2">
-                        <Button @click="navigateLink(route('employee-account.create'))" size="sm" class="h-7 gap-1 bg-black">
+                        <Button @click="navigateLink(route('employee-account.create'))" size="sm"
+                                class="h-7 gap-1 bg-black">
                             <PlusCircle class="h-3.5 w-3.5"/>
                             <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">
                   Add Employee Account
@@ -158,7 +157,8 @@ const dialogState = reactive(new CrudDialogAdapter())
                             <TableHead>Full Name</TableHead>
                             <TableHead>Phone Number</TableHead>
                             <TableHead>Address</TableHead>
-                            <TableHead class="hidden w-[100px] sm:table-cell text-center text-nowrap">Account Status</TableHead>
+                            <TableHead class="hidden w-[100px] sm:table-cell text-center text-nowrap">Account Status
+                            </TableHead>
                             <TableHead class="text-center">
                                 Action
                             </TableHead>
@@ -186,7 +186,7 @@ const dialogState = reactive(new CrudDialogAdapter())
                                     Suspended
                                 </Badge>
                             </TableCell>
-                            <TableCell  class="text-center">
+                            <TableCell class="text-center">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger as-child>
                                         <Button

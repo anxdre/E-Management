@@ -6,7 +6,7 @@ import {Button} from "@/shadcn/ui/button";
 import {ChevronLeft} from "lucide-vue-next";
 import TomTomMap from "@/Components/TomTomMap.vue";
 import {computed, onMounted, ref, useAttrs} from "vue";
-import {watchPausable} from "@vueuse/core";
+import {tryOnBeforeMount, watchPausable} from "@vueuse/core";
 import LayoutWrapper from "@/Layouts/LayoutWrapper.vue";
 import {Slider} from "@/shadcn/ui/slider";
 import {Input} from "@/shadcn/ui/input";
@@ -21,6 +21,7 @@ import {
 import axios from "axios";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
 import {LngLat} from "@tomtom-international/web-sdk-maps";
+import MapView from "@/Components/MapView.vue";
 
 defineOptions({
     layout: LayoutWrapper
@@ -28,10 +29,10 @@ defineOptions({
 
 const {dataFromServer} = defineProps<{ dataFromServer: any }>()
 
-const data = ref({user_id: useAttrs().auth?.user?.id, radius: 10, max_hour: 8})
+const data = ref({user_id: useAttrs().auth?.user?.id, radius: 10, max_hour: 8,name:null,latitude:null,longitude:null})
 const markerPosition = computed({
     get(): LngLat {
-        return new LngLat(data.longitude ?? 112.7166368, data.latitude ?? -7.272563) // Default position
+        return new LngLat(data.value.longitude ?? 112.7166368, data.value.latitude ?? -7.272563) // Default position
     },
 
     set(newValue: LngLat) {
@@ -50,6 +51,7 @@ const radius = computed({
 })
 
 async function getCurrentLocation() {
+    if(dataFromServer) return
     try {
         const position = await new Promise<{ lat: number; lng: number }>((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -72,34 +74,30 @@ async function getCurrentLocation() {
 
         // Kalau dapat lokasi, update reactive state
         if (position.lng) {
-            markerPosition.lng = position.lng;
-            markerPosition.lat = position.lat;
+            markerPosition.value = new LngLat(position.lng,position.lat)
         }
     } catch (error) {
         console.error("Error mendapatkan lokasi:", error);
     }
 }
 
-onMounted(() => {
-    getCurrentLocation(); // Ambil lokasi saat komponen di-mount
-
+tryOnBeforeMount(() => {
     if (dataFromServer) {
         data.value = {
             id: dataFromServer.id,
             user_id: useAttrs().auth?.user?.id,
-            radius: dataFromServer.tolerance,
             max_hour: dataFromServer.max_hour,
             name: dataFromServer.name,
-            latitude: dataFromServer.latitude,
-            longitude: dataFromServer.longitude
         }
-        markerPosition.value = new LngLat(data.value.longitude,data.value.latitude)
-        radius.value = [data.value.radius]
+        markerPosition.value = new LngLat(dataFromServer.longitude,dataFromServer.latitude)
+        radius.value = [dataFromServer.tolerance]
+        return
     }
+     getCurrentLocation(); // Ambil lokasi saat komponen di-mount
 });
 
 watchPausable(markerPosition, () => {
-    defaultToast('Info', `Lat : ${markerPosition.lat}, Long: ${markerPosition.lng}`);
+    defaultToast('Info', `Lat : ${markerPosition.value.lat}, Long: ${markerPosition.value.lng}`);
 })
 
 function _saveLocation() {
@@ -142,15 +140,16 @@ function _saveLocation() {
             <CardContent>
                 <div class="relative">
                     <div class="flex flex-col items-center">
-                        <TomTomMap @markerChange="value => markerPosition = value" :position="markerPosition"
-                                   v-model:radius="radius"/>
+                        <!-- <TomTomMap @markerChange="value => markerPosition = value" :position="markerPosition" -->
+                        <!--            v-model:radius="radius"/> -->
+                        <MapView v-model:marker-radius="radius[0]" v-model:marker-position="markerPosition"/>
                         <span class="text-xs text-muted-foreground">*click on map to add presence location</span>
 
                         <Card
                             class="md:w-1/4 w-full h-fit left-0 bg-white/30 md:absolute p-4 flex-col flex m-4 backdrop-blur-sm hover:backdrop-blur-0 hover:bg-white">
                             <div class="space-y-2">
                                 <Slider class="w-full md:w-3/5"
-                                        :default-value="[10]" :max="100" :min="0" :step="1"
+                                        :default-value="[10]" :max="100" :min="1" :step="1"
                                         v-model:model-value="radius"/>
                                 <Label>Radius : {{ radius[0] }} / 100 M</Label>
                             </div>

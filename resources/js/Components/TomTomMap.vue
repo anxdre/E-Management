@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import {onMounted, reactive, ref, watch} from "vue";
+import { onMounted, reactive, ref, watch } from "vue";
 import '@tomtom-international/web-sdk-maps/dist/maps.css';
-import tt, {LngLat} from "@tomtom-international/web-sdk-maps";
+import tt, { LngLat } from "@tomtom-international/web-sdk-maps";
 
 const mapRef = ref<HTMLElement | null>(null);
 
 const props = defineProps<{
     position: LngLat
 }>()
-const radius = defineModel<any[]>('radius', {required: false, default: [1000]}) // meter
+const radius = defineModel<any[]>('radius', { required: false, default: [1000] }) // meter
 const userPosition = reactive(props.position)
 const emit = defineEmits<{
     (e: 'markerChange', lngLat: LngLat): void
@@ -16,6 +16,7 @@ const emit = defineEmits<{
 
 let globalMarker: tt.Marker
 let circleLayerId = "marker-circle";
+const popupOffset = 25;
 
 function addCircleLayer(map: tt.Map, center: LngLat, radius: number) {
     if (map.getLayer(circleLayerId)) {
@@ -94,21 +95,19 @@ onMounted(() => {
             addCircleLayer(map, location.lngLat, radius.value[0])
             return
         }
-        const popupOffset = 25;
-
-        const marker = new tt.Marker({draggable: true, anchor: 'center'})
+        const marker = new tt.Marker({ draggable: true, anchor: 'center' })
             .setLngLat(location.lngLat)
             .addTo(map);
         globalMarker = marker
 
         marker.on("dragend", () => {
-            const {lng, lat} = marker.getLngLat();
+            const { lng, lat } = marker.getLngLat();
             userPosition.lat = lat
             userPosition.lng = lng;
             addCircleLayer(map, location.lngLat, radius.value[0]);
         });
 
-        const popup = new tt.Popup({offset: popupOffset})
+        const popup = new tt.Popup({ offset: popupOffset })
             .setHTML("Set this location ?");
         marker.setPopup(popup).togglePopup();
         map.setCenter(location.lngLat);
@@ -122,6 +121,34 @@ watch(radius, (newRadius) => {
         addCircleLayer(window.map, globalMarker.getLngLat(), newRadius[0]);
     }
 });
+
+watch(props, () => {
+    console.log(props.position)
+    if (globalMarker) {
+        globalMarker.setLngLat(props.position)
+        addCircleLayer(window.map, props.position, radius.value[0])
+        window.map.panTo(props.position);
+        return
+    }
+
+    const marker = new tt.Marker({ draggable: true, anchor: 'center' })
+        .setLngLat(props.position)
+        .addTo(window.map);
+    globalMarker = marker
+
+    marker.on("dragend", () => {
+        const { lng, lat } = marker.getLngLat();
+        userPosition.lat = lat
+        userPosition.lng = lng;
+        addCircleLayer(window.map, location.lngLat, radius.value[0]);
+    });
+
+    const popup = new tt.Popup({ offset: popupOffset })
+        .setHTML("Set this location ?");
+    marker.setPopup(popup).togglePopup();
+    map.setCenter(location.lngLat);
+    addCircleLayer(window.map, location.lngLat, radius.value[0]);
+}, { deep: true })
 
 </script>
 
