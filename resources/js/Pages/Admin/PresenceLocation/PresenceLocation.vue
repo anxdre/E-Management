@@ -19,7 +19,6 @@ import {
     DialogTitle,
     DialogTrigger
 } from "@/shadcn/ui/dialog";
-import {Link} from "@inertiajs/vue3";
 import CustomLink from "@/Components/CustomLink.vue";
 
 defineOptions({
@@ -128,8 +127,17 @@ const dialogState = reactive(new CrudDialogAdapter())
                             <DialogTitle>
                                 Action
                             </DialogTitle>
-                            <DialogDescription>
-                                <CustomLink  :href="route('presence-location.detail',{id:selectedData.id})"><Button>Manage Employee</Button></CustomLink>
+                            <DialogDescription class="space-y-4 flex flex-col">
+                                <div class="mb-4">
+                                    <h4>Verification Code</h4>
+                                    <span v-if="selectedData.verification?.code">{{selectedData.verification.code}}</span>
+                                    <span v-else>No Verification code</span>
+                                </div>
+                                <Button>Generate New Code</Button>
+                                <CustomLink :href="route('presence-location.detail',{id:selectedData.id})">
+                                    <Button class="w-full" variant="outline">Edit Position</Button>
+                                </CustomLink>
+                                <Button class="bg-black">Delete Location</Button>
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
