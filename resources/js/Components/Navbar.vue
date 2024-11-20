@@ -50,7 +50,7 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                         <Button @click="navigateLink(route('dashboard.index'))"
                                 variant="ghost"
                                 class="hover:text-foreground justify-start w-full rounded">
-                            Dashboard
+                            Employee Presence
                         </Button>
                     </ul>
                     <ul>

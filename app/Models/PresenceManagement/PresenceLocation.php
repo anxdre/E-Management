@@ -24,6 +24,11 @@ class PresenceLocation extends Model
 
     function presenceVerification()
     {
-        $this->hasMany(PresenceVerification::class, 'presence_location_id', 'id');
+        return $this->hasMany(PresenceVerification::class, 'presence_location_id', 'id');
+    }
+    function singleVerification()
+    {
+        return $this->hasMany(PresenceVerification::class, 'presence_location_id', 'id')->latest()
+            ->limit(1);
     }
 }

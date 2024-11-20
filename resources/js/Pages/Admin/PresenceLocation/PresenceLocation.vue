@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import LayoutWrapper from "@/Layouts/LayoutWrapper.vue";
-import {ArrowLeftCircle, ArrowRightCircle, MapPinHouse, PlusCircle, Search, TriangleAlert} from 'lucide-vue-next'
-import {Button} from '@/shadcn/ui/button'
-import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from '@/shadcn/ui/card'
-import {CrudDialogAdapter} from "@/lib/DialogState/CrudDialogAdapter";
-import {onMounted, reactive, ref} from "vue";
+import { ArrowLeftCircle, ArrowRightCircle, MapPinHouse, PlusCircle, Search, TriangleAlert } from 'lucide-vue-next'
+import { Button } from '@/shadcn/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shadcn/ui/card'
+import { CrudDialogAdapter } from "@/lib/DialogState/CrudDialogAdapter";
+import { onMounted, reactive, ref } from "vue";
 import axios from "axios";
-import {errorToast, navigateLink, PaginationOption, successToast} from "@/lib/utils";
-import {debounceFilter, watchPausable} from "@vueuse/core";
-import {Input} from "@/shadcn/ui/input";
+import { errorToast, navigateLink, PaginationOption, successToast } from "@/lib/utils";
+import { debounceFilter, watchPausable } from "@vueuse/core";
+import { Input } from "@/shadcn/ui/input";
 import {
     Dialog,
     DialogClose,
@@ -33,7 +33,7 @@ const paginationWatcher = watchPausable(
     paginateControl,
     (value) => {
         getDataset()
-    }, {eventFilter: debounceFilter(800)}
+    }, { eventFilter: debounceFilter(800) }
 )
 
 function getDataset() {
@@ -43,7 +43,7 @@ function getDataset() {
         page: paginateControl.currentPage,
         search: paginateControl.searchQuery
     }))
-        .then(({data: {data: dataFromServer, message, status_code}}) => {
+        .then(({ data: { data: dataFromServer, message, status_code } }) => {
             dataset.value = dataFromServer.data
             paginateControl.currentPage = dataFromServer.current_page
             paginateControl.nextPageUrl = dataFromServer.next_page_url
@@ -63,9 +63,23 @@ function getDataset() {
 }
 
 function deleteItem(dataId: number) {
-    axios.delete(route('presence-location.json.delete'), {data: {data_id: dataId}})
-        .then(({data: {data: dataFromServer, message, status_code}}) => {
+    axios.delete(route('presence-location.json.delete'), { data: { data_id: dataId } })
+        .then(({ data: { data: dataFromServer, message, status_code } }) => {
             successToast('Success', message)
+            getDataset()
+        })
+        .catch((err) => {
+            errorToast('Error !', err.response.data.message)
+        })
+        .finally(() => {
+        })
+}
+
+function generateCode() {
+    axios.post(route('presence-verification.json.new'), { id: selectedData.value.id })
+        .then(({ data: { data: dataFromServer, message, status_code } }) => {
+            successToast('Success', message)
+            selectedData.value.single_verification = dataFromServer
             getDataset()
         })
         .catch((err) => {
@@ -130,14 +144,35 @@ const dialogState = reactive(new CrudDialogAdapter())
                             <DialogDescription class="space-y-4 flex flex-col">
                                 <div class="mb-4">
                                     <h4>Verification Code</h4>
-                                    <span v-if="selectedData.verification?.code">{{selectedData.verification.code}}</span>
+                                    <h1 class="text-black"
+                                        v-if="selectedData.single_verification.length > 0">{{
+                                            selectedData.single_verification[0].verification_hash
+                                        }}</h1>
                                     <span v-else>No Verification code</span>
                                 </div>
-                                <Button>Generate New Code</Button>
+                                <Button @click="generateCode()">Generate New Code</Button>
                                 <CustomLink :href="route('presence-location.detail',{id:selectedData.id})">
                                     <Button class="w-full" variant="outline">Edit Position</Button>
                                 </CustomLink>
-                                <Button class="bg-black">Delete Location</Button>
+                                <Dialog>
+                                    <DialogTrigger>
+                                        <Button class="bg-black w-full">Delete Location</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            Are you sure to delete this location ?
+                                        </DialogHeader>
+                                        <DialogDescription>
+                                            This action can't be undone
+                                        </DialogDescription>
+                                        <DialogFooter>
+                                            <div class="space-x-2">
+                                                <Button class="bg-black">Yes</Button>
+                                                <Button variant="outline">Cancel</Button>
+                                            </div>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>

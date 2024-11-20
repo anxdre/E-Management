@@ -6,7 +6,9 @@ use App\Http\Controllers\EmailController;
 use App\Http\Controllers\Employee\EmployeeAccountController;
 use App\Http\Controllers\Employee\EmployeeGroupController;
 use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\Presence\EmployeePresenceController;
 use App\Http\Controllers\Presence\PresenceLocationController;
+use App\Http\Controllers\Presence\PresenceVerificationController;
 
 return [
 
@@ -70,7 +72,9 @@ return [
         EmployeeGroupController::class,
 
         //presence
-        PresenceLocationController::class
+        PresenceLocationController::class,
+        PresenceVerificationController::class,
+        EmployeePresenceController::class
     ],
     'api' => [
         /** @inject api **/

@@ -26,10 +26,11 @@ class PresenceLocationController extends Controller
     }
 
     #[Get('/all/json', '.json.all')]
-    public function getAllAccount(request $request)
+    public function getAllLocation(request $request)
     {
         $data = PresenceLocation::query()
             ->where('user_id', Auth::id())
+            ->with('singleVerification')
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%{$request->search}%");
             })
