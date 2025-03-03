@@ -10,7 +10,7 @@ const loader = useGlobalLoaderStrore()
 <template>
     <div class="flex min-h-screen w-full flex-col relative">
         <Toaster/>
-        <div class="flex-col flex sticky top-0">
+        <div class="flex-col flex sticky z-10 top-0">
             <header class="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
                 <Navbar v-bind="$attrs"/>
             </header>

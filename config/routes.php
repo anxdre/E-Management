@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\Employee\EmployeeAccountController;
+use App\Http\Controllers\Employee\EmployeeAttendanceController;
 use App\Http\Controllers\Employee\EmployeeGroupController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\Presence\EmployeePresenceController;
@@ -70,11 +71,12 @@ return [
         //employee
         EmployeeAccountController::class,
         EmployeeGroupController::class,
+        EmployeeAttendanceController::class,
 
         //presence
         PresenceLocationController::class,
         PresenceVerificationController::class,
-        EmployeePresenceController::class
+//        EmployeePresenceController::class
     ],
     'api' => [
         /** @inject api **/

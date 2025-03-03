@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import { toTypedSchema } from "@vee-validate/zod";
-import { z } from "zod";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shadcn/ui/form";
-import { vAutoAnimate } from "@formkit/auto-animate";
-import { useForm } from "vee-validate";
-import { onMounted, ref } from "vue";
-import { Input } from "@/shadcn/ui/input";
-import { Button } from "@/shadcn/ui/button";
-import { ChevronLeft, LoaderCircleIcon, MapPinCheck, NotepadText, PencilIcon } from "lucide-vue-next";
+import {toTypedSchema} from "@vee-validate/zod";
+import {z} from "zod";
+import {FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/shadcn/ui/form";
+import {vAutoAnimate} from "@formkit/auto-animate";
+import {useForm} from "vee-validate";
+import {onMounted, ref} from "vue";
+import {Input} from "@/shadcn/ui/input";
+import {Button} from "@/shadcn/ui/button";
+import {ChevronLeft, LoaderCircleIcon, MapPinCheck, NotepadText, PencilIcon} from "lucide-vue-next";
 import axios from "axios";
-import { cn, errorToast, navigateLink, PhoneRegex, successToast } from "@/lib/utils";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shadcn/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/shadcn/ui/avatar";
+import {cn, errorToast, navigateLink, PhoneRegex, successToast} from "@/lib/utils";
+import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/shadcn/ui/card";
+import {Avatar, AvatarFallback, AvatarImage} from "@/shadcn/ui/avatar";
 import LayoutWrapper from "@/Layouts/LayoutWrapper.vue";
-import { useFileDialog } from "@vueuse/core";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from '@/shadcn/ui/tooltip'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shadcn/ui/select";
-import { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxPortal, ComboboxRoot } from 'radix-vue'
-import { CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/shadcn/ui/command'
-import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete } from '@/shadcn/ui/tags-input'
-import { Label } from "@/shadcn/ui/label";
+import {useFileDialog} from "@vueuse/core";
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,} from '@/shadcn/ui/tooltip'
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/shadcn/ui/select";
+import {ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxPortal, ComboboxRoot} from 'radix-vue'
+import {CommandEmpty, CommandGroup, CommandItem, CommandList} from '@/shadcn/ui/command'
+import {TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete} from '@/shadcn/ui/tags-input'
+import {Label} from "@/shadcn/ui/label";
 
 defineOptions({
     layout: LayoutWrapper
@@ -30,14 +30,14 @@ const props = defineProps<{
 }>()
 const isLoading = ref(false)
 const isEditing = ref(false)
-const isCreate =  ref(props.account == undefined)
+const isCreate = ref(props.account == undefined)
 
 const formSchema = toTypedSchema(z.object({
     id: z.number().nullish(),
-    name: z.string({ required_error: "must be filled" }),
-    email: z.string({ required_error: "must be filled" }),
-    address: z.string({ required_error: "must be filled" }),
-    phone: z.string({ required_error: "must be filled" }).min(8, "8 digit required")
+    name: z.string({required_error: "must be filled"}),
+    email: z.string({required_error: "must be filled"}),
+    address: z.string({required_error: "must be filled"}),
+    phone: z.string({required_error: "must be filled"}).min(8, "8 digit required")
         .regex(PhoneRegex, 'wrong phone number format')
         .transform(value => {
             // Menghapus karakter +, -, dan spasi
@@ -64,7 +64,7 @@ const formSchema = toTypedSchema(z.object({
     path: ['password_confirmation']
 }))
 
-const { handleSubmit, isFieldDirty, setErrors, setFieldValue, values } = useForm({
+const {handleSubmit, isFieldDirty, setErrors, setFieldValue, values} = useForm({
     validationSchema: formSchema, initialValues: {
         id: props.account?.id,
         name: props.account?.user_detail.fullname,
@@ -83,9 +83,9 @@ const onSubmit = handleSubmit((values, ctx) => {
     if (isCreate.value) {
         console.log('add')
         axios.postForm(route('employee-account.json.add'), values, {})
-            .then(({ data: { data: responseData, message, status_code } }) => {
+            .then(({data: {data: responseData, message, status_code}}) => {
                 successToast('Success', message)
-                navigateLink(route('employee-account.detail',{id:responseData.id}))
+                navigateLink(route('employee-account.detail', {id: responseData.id}))
             })
             .catch((error) => {
                 setErrors(error.response.data.errors)
@@ -98,7 +98,7 @@ const onSubmit = handleSubmit((values, ctx) => {
 
     console.log('update')
     axios.postForm(route('employee-account.json.update'), values, {})
-        .then(({ data: { data: responseData, message, status_code } }) => {
+        .then(({data: {data: responseData, message, status_code}}) => {
             successToast('Success', message)
             isCreate.value = false
             isEditing.value = false
@@ -111,7 +111,7 @@ const onSubmit = handleSubmit((values, ctx) => {
         })
 })
 
-const { files, open, reset, onCancel, onChange } = useFileDialog({
+const {files, open, reset, onCancel, onChange} = useFileDialog({
     accept: 'images/*',
     directory: false,
     multiple: false
@@ -210,7 +210,8 @@ onMounted(() => {
                                 <NotepadText/>
                                 Manage Employee Salary
                             </Button>
-                            <Button class="w-full gap-4">
+                            <Button @click="navigateLink(route('employee-attendance.index',{id:props.account.id}))"
+                                    class="w-full gap-4">
                                 <MapPinCheck/>
                                 Manage Employee Presence
                             </Button>

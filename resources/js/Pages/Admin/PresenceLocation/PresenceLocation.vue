@@ -125,8 +125,9 @@ const dialogState = reactive(new CrudDialogAdapter())
             </CardHeader>
             <CardContent class="h-full max-h-screen overflow-y-scroll">
                 <Dialog v-if="dataset.length > 0">
-                    <DialogTrigger class="gap-4 grid grid-flow-row md:grid-cols-3 p-4" as="div">
-                        <Card v-for="data in dataset" :key="data.id" @click="selectedData = data"
+                    <div class="gap-4 grid grid-flow-row md:grid-cols-3 p-4">
+                    <DialogTrigger @click="selectedData = data" v-for="data in dataset" :key="data.id" as="div">
+                        <Card
                               class="p-4 cursor-pointer hover:bg-black/10 hover:outline hover:outline-black/20 w-full">
                             <div class="inline-flex gap-2 items-center text-lg w-full justify-between">
                                 <div class="gap-4 flex flex-col items-center text-center text-lg w-full font-semibold">
@@ -183,6 +184,7 @@ const dialogState = reactive(new CrudDialogAdapter())
                             </DialogClose>
                         </DialogFooter>
                     </DialogContent>
+                    </div>
                 </Dialog>
                 <Card v-else class="p-4 m-2">
                     <div class="inline-flex gap-2 items-center text-lg w-full justify-center">

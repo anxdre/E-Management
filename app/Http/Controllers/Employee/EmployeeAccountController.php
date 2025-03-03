@@ -81,9 +81,9 @@ class EmployeeAccountController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
+            'email' => 'required|string|email|max:255|unique:' . User::class,
             'phone' => 'required|min:10|unique:' . UserDetail::class,
-            'address' => 'required|string|lowercase|max:255',
+            'address' => 'required|string|max:255',
             'profile_picture' => ['sometimes', File::image()->max(15 * 1024)],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);

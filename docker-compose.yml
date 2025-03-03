@@ -1,0 +1,57 @@
+services:
+    core:
+        hostname: '${NGE_HOSTNAME:-nge-hostname}'
+        build:
+            context: ./vendor/dentro/nge/image
+            dockerfile: Dockerfile
+            args:
+                - 'PHP_VERSION=${PHP_VERSION:-8.3}'
+                - 'USER_CONTAINER=${NGE_USER:-enji}'
+                - 'PUID=${NGE_PUID:-1000}'
+                - 'PGID=${NGE_PGID:-1000}'
+        image: 'dentro/nge:8.3'
+        user: '${NGE_USER:-enji}'
+        restart: unless-stopped
+        ports:
+            - '${APP_PORT:-80}:80'
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        environment:
+            DOCKER_ENV: '${APP_ENV}'
+            DOCKER_WORKERS: '${DOCKER_WORKERS:-auto}'
+        volumes:
+            - '.:/var/www'
+            - './storage/app/psysh:/home/${NGE_USER}/.config/psysh'
+        networks:
+            - intl
+        depends_on:
+            - mysql
+    mysql:
+        image: 'mysql/mysql-server:8.0'
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ROOT_HOST: '%'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        volumes:
+            - 'nge-mysql:/var/lib/mysql'
+            - './vendor/dentro/nge/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
+        networks:
+            - intl
+        healthcheck:
+            test:
+                - CMD
+                - mysqladmin
+                - ping
+                - '-p${DB_PASSWORD}'
+            retries: 3
+            timeout: 5s
+networks:
+    intl:
+        driver: bridge
+volumes:
+    nge-mysql:
+        driver: local
