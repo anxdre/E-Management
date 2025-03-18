@@ -163,24 +163,23 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                     <Accordion type="single" collapsible>
                         <AccordionItem value="item-1">
                             <AccordionTrigger
-                                @click="navigateLink(route('presence-location.index'))"
                                 :class="{'text-white font-semibold bg-primary':$page.url.startsWith('/Presence')}"
                                 class="py-2 px-4 rounded-md">
                                 Presence
                             </AccordionTrigger>
                             <AccordionContent class="space-y-4 w-full p-4">
                                 <ul>
-                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                    <Button @click="navigateLink(route('presence-location.index'))"
                                             variant="ghost"
-                                            class="hover:text-foreground justify-start w-full">
-                                        Dashboard
+                                            class="hover:text-foreground justify-start w-full rounded">
+                                        Presence Location
                                     </Button>
                                 </ul>
                                 <ul>
                                     <Button @click="navigateLink(route('dashboard.index'))"
                                             variant="ghost"
-                                            class="hover:text-foreground justify-start w-full">
-                                        Dashboard
+                                            class="hover:text-foreground justify-start w-full rounded">
+                                        Employee Presence
                                     </Button>
                                 </ul>
                                 <ul>
@@ -202,24 +201,19 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                             </AccordionTrigger>
                             <AccordionContent class="space-y-4 w-full p-4">
                                 <ul>
-                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                    <Button @click="navigateLink(route('employee-group.index'))"
                                             variant="ghost"
-                                            class="hover:text-foreground justify-start w-full">
-                                        Dashboard
+                                            class="hover:text-foreground gap-2 justify-start w-full rounded">
+                                        <UsersRound size="18"/>
+                                        Employee Group
                                     </Button>
                                 </ul>
                                 <ul>
-                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                    <Button @click="navigateLink(route('employee-account.index'))"
                                             variant="ghost"
-                                            class="hover:text-foreground justify-start w-full">
-                                        Dashboard
-                                    </Button>
-                                </ul>
-                                <ul>
-                                    <Button @click="navigateLink(route('dashboard.index'))"
-                                            variant="ghost"
-                                            class="hover:text-foreground justify-start w-full">
-                                        Dashboard
+                                            class="hover:text-foreground gap-2 justify-start w-full rounded">
+                                        <UserRound size="18"/>
+                                        Employee Account
                                     </Button>
                                 </ul>
                             </AccordionContent>
@@ -234,10 +228,11 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                             </AccordionTrigger>
                             <AccordionContent class="space-y-4 w-full p-4">
                                 <ul>
-                                    <Button @click="navigateLink(route('dashboard.index'))"
+                                    <Button @click="navigateLink(route('employee-group.index'))"
                                             variant="ghost"
-                                            class="hover:text-foreground justify-start w-full">
-                                        Dashboard
+                                            class="hover:text-foreground gap-2 justify-start w-full rounded">
+                                        <UsersRound size="18"/>
+                                        Employee Group
                                     </Button>
                                 </ul>
                                 <ul>
