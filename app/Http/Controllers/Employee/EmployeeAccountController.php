@@ -81,9 +81,10 @@ class EmployeeAccountController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
+            'email' => 'required|string|email|max:255|unique:' . User::class,
             'phone' => 'required|min:10|unique:' . UserDetail::class,
-            'address' => 'required|string|lowercase|max:255',
+            'address' => 'required|string|max:255',
+            'company_group.*' => 'required|exists:'.CompanyGroup::class.',id',
             'profile_picture' => ['sometimes', File::image()->max(15 * 1024)],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
@@ -107,6 +108,7 @@ class EmployeeAccountController extends Controller
                 'is_suspended' => $request->is_suspended,
                 'company_id' => Auth::id(),
                 'type' => 'employee']);
+            $user->groups()->sync($request->company_group);
             DB::commit();
         } catch (\Exception $exception) {
             DB::rollBack();
