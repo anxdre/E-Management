@@ -4,10 +4,15 @@ import Navbar from "@/Components/Navbar.vue";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
 import {Toaster} from "@/shadcn/ui/toast";
 import {router} from "@inertiajs/vue3";
+
+
 const loader = useGlobalLoaderStrore()
 </script>
 
 <template>
+    <Head>
+        <title>Teamway</title>
+    </Head>
     <div class="flex min-h-screen w-full flex-col relative">
         <Toaster/>
         <div class="flex-col flex sticky top-0">

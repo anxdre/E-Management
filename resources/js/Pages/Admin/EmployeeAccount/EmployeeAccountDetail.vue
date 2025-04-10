@@ -20,6 +20,7 @@ import { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxPortal, Combobo
 import { CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/shadcn/ui/command'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete } from '@/shadcn/ui/tags-input'
 import { Label } from "@/shadcn/ui/label";
+import { router } from "@inertiajs/vue3";
 
 defineOptions({
     layout: LayoutWrapper
@@ -30,7 +31,7 @@ const props = defineProps<{
 }>()
 const isLoading = ref(false)
 const isEditing = ref(false)
-const isCreate =  ref(props.account == undefined)
+const isCreate = ref(props.account == undefined)
 
 const formSchema = toTypedSchema(z.object({
     id: z.number().nullish(),
@@ -85,7 +86,7 @@ const onSubmit = handleSubmit((values, ctx) => {
         axios.postForm(route('employee-account.json.add'), values, {})
             .then(({ data: { data: responseData, message, status_code } }) => {
                 successToast('Success', message)
-                navigateLink(route('employee-account.detail',{id:responseData.id}))
+                navigateLink(route('employee-account.detail', { id: responseData.id }))
             })
             .catch((error) => {
                 setErrors(error.response.data.errors)
@@ -96,7 +97,6 @@ const onSubmit = handleSubmit((values, ctx) => {
         return
     }
 
-    console.log('update')
     axios.postForm(route('employee-account.json.update'), values, {})
         .then(({ data: { data: responseData, message, status_code } }) => {
             successToast('Success', message)
@@ -210,7 +210,8 @@ onMounted(() => {
                                 <NotepadText/>
                                 Manage Employee Salary
                             </Button>
-                            <Button class="w-full gap-4">
+                            <Button @click="router.get(route('employee-presence.index',{user:props.account.id}))"
+                                    class="w-full gap-4">
                                 <MapPinCheck/>
                                 Manage Employee Presence
                             </Button>

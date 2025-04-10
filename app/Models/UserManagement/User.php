@@ -58,4 +58,24 @@ class User extends Authenticatable implements MustVerifyEmail
     function presence(){
         return $this->hasMany(PresenceEmployee::class, 'user_id', 'id');
     }
+
+    public function company()
+    {
+        return $this->belongsTo(User::class, 'company_id');
+    }
+
+    public function employees()
+    {
+        return $this->hasMany(User::class, 'company_id');
+    }
+
+    public function isCompany(): bool
+    {
+        return is_null($this->company_id);
+    }
+
+    public function isEmployee(): bool
+    {
+        return !is_null($this->company_id);
+    }
 }
