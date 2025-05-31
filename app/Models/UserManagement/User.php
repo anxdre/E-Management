@@ -22,6 +22,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'id','remember_token',
     ];
 
+    protected $primaryKey = 'id';
+
     /**
      * The attributes that should be hidden for serialization.
      *

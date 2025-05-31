@@ -10,14 +10,14 @@ import {
     LucideClock,
     MoreHorizontal,
     PlusCircle,
+    RotateCw,
     Search,
-    TriangleAlert,
-    RotateCw
+    TriangleAlert
 } from 'lucide-vue-next'
 import { Button } from '@/shadcn/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shadcn/ui/card'
 import { CrudDialogAdapter } from "@/lib/DialogState/CrudDialogAdapter";
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import axios from "axios";
 import { errorToast, navigateLink, PaginationOption, successToast } from "@/lib/utils";
 import { debounceFilter, watchPausable } from "@vueuse/core";
@@ -32,13 +32,25 @@ import {
 } from "@/shadcn/ui/dropdown-menu";
 import { Badge } from "@/shadcn/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shadcn/ui/table";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger
+} from "@/shadcn/ui/dialog";
+import { Label } from "@/shadcn/ui/label";
+import { usePage } from "@inertiajs/vue3";
+import MapView from "@/Components/MapView.vue";
+import { LngLat } from "@tomtom-international/web-sdk-maps";
 
 defineOptions({
     layout: LayoutWrapper
 })
-
+const dialogState = reactive(new CrudDialogAdapter())
 const dataset = ref([])
-const selectedData = ref()
 const isLoading = ref(false)
 const paginateControl = reactive(new PaginationOption())
 const paginationWatcher = watchPausable(
@@ -48,18 +60,30 @@ const paginationWatcher = watchPausable(
     }, { eventFilter: debounceFilter(800) }
 )
 const filterControl = ref({
-    filterBy:'',
-    sortBy:'',
-    orderBy:''
+    filterBy: '',
+    sortBy: '',
+    orderBy: '',
+    location_id: '',
 })
+
+const form = ref({
+    user_id: '',
+    location_id: '',
+    latitude: '',
+    longitude: '',
+    code: '',
+    note: '',
+    time:'',
+    status:'in',
+    attachment: null as File | null
+})
+const locationDataSet = ref([])
+const profile = ref({})
 
 function getDataset() {
     paginationWatcher.pause()
     isLoading.value = true
-    axios.get(route('presence-location.json.all', {
-        page: paginateControl.currentPage,
-        search: paginateControl.searchQuery
-    }))
+    axios.get(route('employee-presence.json.all',{user:profile.value.id}))
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
             dataset.value = dataFromServer.data
             paginateControl.currentPage = dataFromServer.current_page
@@ -79,24 +103,114 @@ function getDataset() {
         })
 }
 
-function deleteItem(dataId: number) {
-    axios.delete(route('presence-location.json.delete'), { data: { data_id: dataId } })
+    // function deleteItem(dataId: number) {
+    //     axios.delete(route('presence-location.json.delete'), { data: { data_id: dataId } })
+    //         .then(({ data: { data: dataFromServer, message, status_code } }) => {
+    //             successToast('Success', message)
+    //             getDataset()
+    //         })
+    //         .catch((err) => {
+    //             errorToast('Error !', err.response.data.message)
+    //         })
+    //         .finally(() => {
+    //         })
+    // }
+const handleSubmit = async () => {
+    isLoading.value = true
+    axios.post(route('employee-presence.json.create', { user: profile.value.id }),form)
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
-            successToast('Success', message)
-            getDataset()
+            locationDataSet.value = dataFromServer.data
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)
         })
         .finally(() => {
+            paginationWatcher.resume()
+            isLoading.value = false
         })
 }
 
-onMounted(() => {
-    getDataset()
+function getAllLocation() {
+    isLoading.value = true
+    axios.get(route('presence-location.json.all',))
+        .then(({ data: { data: dataFromServer, message, status_code } }) => {
+            locationDataSet.value = dataFromServer.data
+        })
+        .catch((err) => {
+            errorToast('Error !', err.response.data.message)
+        })
+        .finally(() => {
+            isLoading.value = false
+        })
+}
+
+async function getProfile() {
+    let page = usePage()
+    let path = page.url
+    let match = path.match(/\/Employee\/(\d+)\/Presence-History/)
+    let userId = match?.[1] ?? null
+    if (!userId) {
+        return
+    }
+    isLoading.value = true
+    try {
+        const response = await axios.get(route('employee-account.json.detail', { user: userId }))
+        const { data: dataFromServer, message, status_code } = response.data
+        profile.value = dataFromServer
+    } catch (err) {
+        errorToast('Error', 'Profile not loaded yet, please reload the page')
+    } finally {
+        isLoading.value = false
+    }
+}
+
+const markerPosition = computed({
+    get(): LngLat {
+        return new LngLat(form.value.longitude ?? 112.7166368, form.value.latitude ?? -7.272563) // Default position
+    },
+
+    set(newValue: LngLat) {
+        form.value.longitude = newValue.lng
+        form.value.latitude = newValue.lat
+    }
 })
 
-const dialogState = reactive(new CrudDialogAdapter())
+async function getCurrentLocation() {
+    try {
+        const position = await new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+            if (!navigator.geolocation) {
+                alert("Geolocation tidak didukung di browser ini.");
+                return resolve(null);
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    resolve({ lat: latitude, lng: longitude });
+                },
+                (error) => {
+                    alert(`Gagal mendapatkan lokasi: ${error.message}`);
+                    resolve(null);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        });
+
+        // Kalau dapat lokasi, update reactive state
+        if (position.lng) {
+            markerPosition.value = new LngLat(position.lng, position.lat)
+        }
+    } catch (error) {
+        console.error("Error mendapatkan lokasi:", error);
+    }
+}
+
+onMounted(async () => {
+    await getProfile()
+    getDataset()
+    getAllLocation()
+    await getCurrentLocation()
+})
 </script>
 
 <template>
@@ -179,44 +293,130 @@ const dialogState = reactive(new CrudDialogAdapter())
             </CardHeader>
             <CardContent class="h-full max-h-screen overflow-y-scroll">
                 <div class="ml-auto justify-end flex items-center gap-2 px-4">
-                        <Button @click="navigateLink(route('presence-location.create'))" size="sm"
-                                class="h-7 gap-1 bg-black w-full md:w-fit">
-                            <PlusCircle class="h-3.5 w-3.5"/>
-                            <span class=" sm:not-sr-only sm:whitespace-nowrap">Add new presence</span>
-                        </Button>
-                    </div>
+                    <Dialog>
+                        <DialogTrigger>
+                            <Button size="sm"
+                                    class="h-7 gap-1 bg-black w-full md:w-fit">
+                                <PlusCircle class="h-3.5 w-3.5"/>
+                                <span class=" sm:not-sr-only sm:whitespace-nowrap">Add new presence</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add New Presence</DialogTitle>
+                                <DialogDescription>Fill the form below to add employee presence</DialogDescription>
+                            </DialogHeader>
+
+                            <div class="grid gap-4 py-4">
+                                <div class="grid grid-cols-4 items-center gap-4">
+                                    <Label for="user_id" class="text-right">User</Label>
+                                    <Input disabled id="user_id" :model-value="profile.user_detail.fullname"
+                                           class="col-span-3" type="text"/>
+                                </div>
+
+                                <div class="grid grid-cols-4 items-center gap-4">
+                                    <Label for="location_id" class="text-right">Location</Label>
+                                    <Select v-model="form.location_id" id="location_id">
+                                        <SelectTrigger class="col-span-3">
+                                            <ul>{{
+                                                    locationDataSet.find((item) => item.id == form.location_id)?.name || 'Select Location'
+                                                }}
+                                            </ul>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem v-for="location in locationDataSet" :value="location.id">
+                                                {{ location.name }}
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div v-if="$attrs.auth.user.type == 'employee'"
+                                     class="grid grid-cols-4 items-center gap-4">
+                                    <Label for="code" class="text-right">Verification Code</Label>
+                                    <Input id="code" v-model="form.code" class="col-span-3"/>
+                                </div>
+
+                                <div class="grid grid-cols-4 items-center gap-4">
+                                    <Label for="map" class="text-right">Location</Label>
+                                    <MapView id="map" class="h-[100px] md:h-[200px] col-span-3"
+                                             v-model:marker-position="markerPosition" marker-radius="0"/>
+                                </div>
+
+                                <div class="grid grid-cols-4 items-center gap-4">
+                                    <Label for="note" class="text-right">Note</Label>
+                                    <Input id="note" v-model="form.note" class="col-span-3"/>
+                                </div>
+
+                                <div class="grid grid-cols-4 items-center gap-4">
+                                    <Label for="attachment" class="text-right">Attachment</Label>
+                                    <Input id="attachment" class="col-span-3" type="file"
+                                           @change="e => form.attachment = e.target.files?.[0] ?? null"/>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button @click="handleSubmit">
+                                    Create Presence
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
                 <div class="flex flex-col gap-2 p-4">
                     <div class="flex flex-col items-center md:flex-row justify-between gap-2">
                         <Select v-model="filterControl.filterBy">
                             <SelectTrigger class="w-full md:w-1/6">
-                                <ul>{{filterControl.filterBy.title || 'Filter By'}}</ul>
+                                <ul>{{ filterControl.filterBy.title || 'Filter By' }}</ul>
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem :value="{id:location,title:'location'}">location</SelectItem>
-                                <SelectItem :value="{id:location,title:'presence status'}">presence status</SelectItem>
-                                <SelectItem :value="{id:admin_status,title:'status by admin'}">status by admin</SelectItem>
+                                <SelectItem :value="{id:'location',title:'location'}">location</SelectItem>
+                                <SelectItem :value="{id:'presence_status',title:'presence status'}">presence status
+                                </SelectItem>
+                                <SelectItem :value="{id:'admin_status',title:'status by admin'}">status by admin
+                                </SelectItem>
                             </SelectContent>
                         </Select>
-                        <Select v-model="filterControl.sortBy">
-                            <SelectTrigger class="w-full md:w-1/6">
-                                <ul>{{filterControl.sortBy.title || 'Value'}}</ul>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem :value="{id:'in',title:'In'}">In</SelectItem>
-                                <SelectItem :value="{id:'out',title:'Out'}">Out</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select v-model="filterControl.orderBy">
-                            <SelectTrigger class="w-full md:w-1/6">
-                                <ul>{{filterControl.orderBy.title || 'Order From'}}</ul>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem :value="{id:'asc',title:'Newest'}">Newest</SelectItem>
-                                <SelectItem :value="{id:'desc',title:'Oldest'}">Oldest</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Button @click="()=>{filterControl.filterBy = '';filterControl.orderBy = '';filterControl.sortBy = ''}" size="sm" class="h-7 gap-1 bg-black w-full md:w-fit group">
-                            <RotateCw class="h-3.5 w-3.5"/> <span class="block md:hidden group-hover:inline sm:not-sr-only sm:whitespace-nowrap">Reset Filter</span>
+                        <div class="w-full" v-if="filterControl.filterBy.id == 'location'">
+                            <Select v-model="filterControl.location_id" id="location_id">
+                                <SelectTrigger>
+                                    <ul>{{
+                                            locationDataSet.find((item) => item.id == filterControl.location_id)?.name || 'Select Location'
+                                        }}
+                                    </ul>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem v-for="location in locationDataSet" :value="location.id">
+                                        {{ location.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div class="w-full inline-flex gap-2" v-if="filterControl.filterBy">
+                            <Select v-model="filterControl.sortBy">
+                                <SelectTrigger>
+                                    <ul>{{ filterControl.sortBy.title || 'Value' }}</ul>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem :value="{id:'in',title:'In'}">In</SelectItem>
+                                    <SelectItem :value="{id:'out',title:'Out'}">Out</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select v-model="filterControl.orderBy">
+                                <SelectTrigger>
+                                    <ul>{{ filterControl.orderBy.title || 'Order From' }}</ul>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem :value="{id:'asc',title:'Newest'}">Newest</SelectItem>
+                                    <SelectItem :value="{id:'desc',title:'Oldest'}">Oldest</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button
+                            @click="()=>{filterControl.filterBy = '';filterControl.orderBy = '';filterControl.sortBy = ''}"
+                            size="sm" class="h-7 gap-1 bg-black w-full md:w-fit group">
+                            <RotateCw class="h-3.5 w-3.5"/>
+                            <span class="block md:hidden group-hover:inline sm:not-sr-only sm:whitespace-nowrap">Reset Filter</span>
                         </Button>
 
                         <div class="relative w-full md:ml-auto flex-1 md:grow-0">

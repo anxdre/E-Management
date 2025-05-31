@@ -3,6 +3,7 @@ import '@tomtom-international/web-sdk-maps/dist/maps.css';
 import tt,{ LngLat, LngLatLike } from '@tomtom-international/web-sdk-maps';
 import { onMounted, ref, watch } from 'vue';
 import { watchPausable } from '@vueuse/core';
+import { cn } from "@/lib/utils";
 
 const markerPosition = defineModel<LngLatLike|undefined>('markerPosition',{required:true})
 const markerRadius = defineModel('markerRadius',{required:true})
@@ -12,6 +13,10 @@ let globalMap:tt.Map
 let globalMarker:tt.Marker
 const globalCircleId = 'marker-circle'
 const popUpOffset = 25
+
+const props = defineProps<{
+    class?: string
+}>()
 
 onMounted(()=>{
     markerWatcher.pause()
@@ -132,7 +137,7 @@ watch(markerRadius,()=>{
 
 </script>
 <template>
-    <div ref="mapRef" class="w-full h-[500px]"></div>
+    <div ref="mapRef" :class="cn('w-full h-[500px] md:h-[800px] z-0', props.class)"></div>
 </template>
 <style>
 

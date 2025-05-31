@@ -22,6 +22,7 @@ import axios from "axios";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
 import {LngLat} from "@tomtom-international/web-sdk-maps";
 import MapView from "@/Components/MapView.vue";
+import TimePicker from "@/Components/TimePicker.vue";
 
 defineOptions({
     layout: LayoutWrapper
@@ -29,7 +30,17 @@ defineOptions({
 
 const {dataFromServer} = defineProps<{ dataFromServer: any }>()
 
-const data = ref({user_id: useAttrs().auth?.user?.id, radius: 10, max_hour: 8,name:null,latitude:null,longitude:null})
+const data = ref({
+    user_id: useAttrs().auth?.user?.id,
+    radius: 10,
+    max_hour: 8,
+    name:null,
+    latitude:null,
+    longitude:null,
+    min_hour:null,
+    max_hour:null,
+    start_hour:null
+})
 const markerPosition = computed({
     get(): LngLat {
         return new LngLat(data.value.longitude ?? 112.7166368, data.value.latitude ?? -7.272563) // Default position
@@ -87,6 +98,8 @@ tryOnBeforeMount(() => {
             id: dataFromServer.id,
             user_id: useAttrs().auth?.user?.id,
             max_hour: dataFromServer.max_hour,
+            min_hour: dataFromServer.min_hour,
+            start_hour: dataFromServer.start_hour,
             name: dataFromServer.name,
         }
         markerPosition.value = new LngLat(dataFromServer.longitude,dataFromServer.latitude)
@@ -146,7 +159,7 @@ function _saveLocation() {
                         <span class="text-xs text-muted-foreground">*click on map to add presence location</span>
 
                         <Card
-                            class="md:w-1/4 w-full h-fit left-0 bg-white/30 md:absolute p-4 flex-col flex m-4 backdrop-blur-sm hover:backdrop-blur-0 hover:bg-white">
+                            class="md:w-1/4 w-full h-3/4 overflow-scroll left-0 bg-white/30 md:absolute p-4 flex-col flex m-4 backdrop-blur-sm hover:backdrop-blur-0 hover:bg-white">
                             <div class="space-y-2">
                                 <Slider class="w-full md:w-3/5"
                                         :default-value="[10]" :max="100" :min="1" :step="1"
@@ -156,25 +169,26 @@ function _saveLocation() {
 
                             <section class="space-y-4 mt-4">
                                 <div class="space-y-1">
-                                    <Label>Location presence name</Label>
-                                    <Input class="w-full" type="text" v-model="data.name"/>
-                                </div>
-                                <div>
-                                    <NumberField id="max_hour" v-model="data.max_hour" :default-value="8" :max="24"
-                                                 :min="1">
-                                        <Label for="max_hour">Max hour</Label>
-                                        <NumberFieldContent>
-                                            <NumberFieldDecrement/>
-                                            <NumberFieldInput/>
-                                            <NumberFieldIncrement/>
-                                        </NumberFieldContent>
-                                    </NumberField>
+                                    <Label required>Location presence name</Label>
+                                    <Input class="bg-white " type="text" v-model="data.name"/>
                                 </div>
                                 <div class="space-y-1">
-                                    <Label>Longitude</Label>
+                                    <Label required>Longitude</Label>
                                     <Input disabled v-model:model-value="data.longitude"/>
-                                    <Label>Latitude</Label>
+                                    <Label required>Latitude</Label>
                                     <Input disabled v-model:model-value="data.latitude"/>
+                                </div>
+                                <div>
+                                    <Label>Presence Start</Label>
+                                    <TimePicker v-model="data.start_hour" />
+                                </div>
+                                <div>
+                                    <Label>Min Working Hour</Label>
+                                    <TimePicker v-model="data.min_hour" />
+                                </div>
+                                <div>
+                                    <Label>Max Working Hour</Label>
+                                    <TimePicker v-model="data.max_hour" />
                                 </div>
                                 <Button class="w-full" @click="_saveLocation">Save</Button>
                             </section>

@@ -19,6 +19,8 @@ return new class extends Migration
             $table->double('latitude');
             $table->double('longitude');
             $table->double('tolerance');
+            $table->dateTime('time');
+            $table->dateTime('extended_time')->nullable();
             $table->text('note')->nullable();
             $table->string('attachment')->nullable();
             $table->enum('status',['in','out']);

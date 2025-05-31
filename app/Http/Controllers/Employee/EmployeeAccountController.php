@@ -53,6 +53,20 @@ class EmployeeAccountController extends Controller
         return Inertia::render('Admin/EmployeeAccount/EmployeeAccountDetail', ['account' => $data, 'companyGroup' => $userGroup]);
     }
 
+    #[Get('/json/{user}', '.json.detail',['scope-company'])]
+    public function detailJson(int $id)
+    {
+        $data = User::query()
+            ->where('company_id', Auth::id())
+            ->where('type', 'employee')
+            ->with(['userDetail','groups'])
+            ->find($id);
+        if ($data == null) {
+            return new JsonBody(null, 'User not found', 404);
+        }
+         return new JsonBody($data, 'User found');
+    }
+
     #[Get('/all/json', '.json.all')]
     public function getAllAccount(request $request)
     {

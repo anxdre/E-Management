@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Presence;
 
+use App\DateHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JsonBody;
 use App\Models\PresenceManagement\PresenceLocation;
@@ -19,6 +20,7 @@ use Inertia\Inertia;
 #[Prefix('Presence/Location'), Name('presence-location'), Middleware('auth')]
 class PresenceLocationController extends Controller
 {
+    use DateHelper;
     #[Get('/', '.index')]
     public function index(Request $request)
     {
@@ -65,7 +67,9 @@ class PresenceLocationController extends Controller
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'radius' => 'required|numeric',
-            'max_hour' => 'required|numeric',
+            'max_hour' => 'nullable|string',
+            'min_hour' => 'nullable|string',
+            'start_hour' => 'nullable|string',
         ]);
 
         $data = PresenceLocation::query()->updateOrCreate([
@@ -76,9 +80,10 @@ class PresenceLocationController extends Controller
             'latitude' => $request->get('latitude'),
             'longitude' => $request->get('longitude'),
             'tolerance' => $request->get('radius'),
-            'max_hour' => $request->get('max_hour'),
+            'max_hour' => $this->formatTime($request->get('max_hour')),
+            'min_hour' => $this->formatTime($request->get('min_hour')),
+            'start_hour' => $this->formatTime($request->get('start_hour')),
         ]);
-
         return new JsonBody($data, 'Data saved successfully');
     }
 

@@ -16,7 +16,16 @@ class EnsureUserWithinCompanyScope
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $targetUser = User::query()->findOrFail($request->route('user'));
+        $userParam = $request->route('user');
+        $targetUser = null;
+        if ($userParam instanceof User) {
+            $targetUser = $userParam;
+        } else {
+            $targetUser = User::findOrFail($userParam);
+        }
+        if (!$targetUser) {
+            abort(404, 'User not found.');
+        }
 
         $current = auth()->user();
 

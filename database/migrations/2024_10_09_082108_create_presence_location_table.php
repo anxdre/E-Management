@@ -18,7 +18,9 @@ return new class extends Migration
             $table->double('latitude');
             $table->double('longitude');
             $table->double('tolerance');
-            $table->string('max_hour')->nullable();
+            $table->time('max_hour')->nullable();
+            $table->time('min_hour')->nullable();
+            $table->time('start_hour')->nullable();
             $table->timestamps();
         });
     }
