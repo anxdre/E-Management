@@ -18,12 +18,11 @@ return new class extends Migration
             $table->foreignId('presence_verification_id')->constrained('presence_verifications');
             $table->double('latitude');
             $table->double('longitude');
-            $table->double('tolerance');
-            $table->dateTime('time');
+            $table->dateTime('time_in');
+            $table->dateTime('time_out');
             $table->dateTime('extended_time')->nullable();
             $table->text('note')->nullable();
             $table->string('attachment')->nullable();
-            $table->enum('status',['in','out']);
             $table->enum('status_by_admin',['pending','approved','rejected'])->default('pending');
             $table->timestamps();
         });

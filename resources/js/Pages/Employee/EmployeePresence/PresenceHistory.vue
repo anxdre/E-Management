@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import LayoutWrapper from "@/Layouts/LayoutWrapper.vue";
+import VueDatePicker from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css'
 import {
     ArrowLeftCircle,
     ArrowRightCircle,
@@ -45,6 +47,7 @@ import { Label } from "@/shadcn/ui/label";
 import { usePage } from "@inertiajs/vue3";
 import MapView from "@/Components/MapView.vue";
 import { LngLat } from "@tomtom-international/web-sdk-maps";
+import DateTimePicker from "@/Components/DateTimePicker.vue";
 
 defineOptions({
     layout: LayoutWrapper
@@ -74,6 +77,8 @@ const form = ref({
     code: '',
     note: '',
     time:'',
+    time_in:undefined,
+    time_out:undefined,
     status:'in',
     attachment: null as File | null
 })
@@ -117,9 +122,13 @@ function getDataset() {
     // }
 const handleSubmit = async () => {
     isLoading.value = true
-    axios.post(route('employee-presence.json.create', { user: profile.value.id }),form)
+    axios.post(route('employee-presence.json.create', { user: profile.value.id }),form.value)
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
+            if(statusCode != 200){
+                errorToast('Error',message)
+            }
             locationDataSet.value = dataFromServer.data
+            successToast('Success','Presence Saved')
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)
@@ -128,6 +137,14 @@ const handleSubmit = async () => {
             paginationWatcher.resume()
             isLoading.value = false
         })
+}
+
+const formatDate = (date) => {
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
 }
 
 function getAllLocation() {
@@ -157,6 +174,7 @@ async function getProfile() {
         const response = await axios.get(route('employee-account.json.detail', { user: userId }))
         const { data: dataFromServer, message, status_code } = response.data
         profile.value = dataFromServer
+        form.value.user_id = dataFromServer.id
     } catch (err) {
         errorToast('Error', 'Profile not loaded yet, please reload the page')
     } finally {
@@ -335,6 +353,18 @@ onMounted(async () => {
                                      class="grid grid-cols-4 items-center gap-4">
                                     <Label for="code" class="text-right">Verification Code</Label>
                                     <Input id="code" v-model="form.code" class="col-span-3"/>
+                                </div>
+
+                                <div v-if="$attrs.auth.user.type == 'company'"
+                                     class="grid grid-cols-4 items-center gap-4">
+                                    <Label for="code" class="text-right">Time In</Label>
+                                    <VueDatePicker :preview-format="formatDate" class="min-w-max" v-model:modelValue="form.time_in" />
+                                </div>
+
+                                <div v-if="$attrs.auth.user.type == 'company'"
+                                     class="grid grid-cols-4 items-center gap-4">
+                                    <Label for="code" class="text-right">Time Out</Label>
+                                    <VueDatePicker :preview-format="formatDate" class="min-w-max" v-model:modelValue="form.time_out" />
                                 </div>
 
                                 <div class="grid grid-cols-4 items-center gap-4">
