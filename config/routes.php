@@ -74,7 +74,8 @@ return [
         //presence
         PresenceLocationController::class,
         PresenceVerificationController::class,
-        EmployeePresenceController::class
+        EmployeePresenceController::class,
+
     ],
     'api' => [
         /** @inject api **/

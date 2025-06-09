@@ -15,7 +15,8 @@ const globalCircleId = 'marker-circle'
 const popUpOffset = 25
 
 const props = defineProps<{
-    class?: string
+    class?: string,
+    viewOnly?:boolean
 }>()
 
 onMounted(()=>{
@@ -33,10 +34,12 @@ if(!mapRef.value) return
         window.addEventListener("resize", ()=>globalMap.resize())
         markerWatcher.resume()
         addGlobalMarker(markerPosition.value)
-
     })
 
     globalMap.on("click", (location:any)=>{
+        if (props.viewOnly){
+            return
+        }
         const {lng,lat}= location.lngLat
         markerPosition.value = new tt.LngLat(lng,lat)
         addGlobalMarker(location.lngLat)
@@ -52,7 +55,7 @@ function addGlobalMarker(coordinate:LngLat){
     }
 
     try{
-    globalMarker = new tt.Marker({draggable:true,anchor:'center'})
+    globalMarker = new tt.Marker({draggable:!props.viewOnly,anchor:'center'})
     .setLngLat(coordinate)
     .addTo(globalMap)
     }catch(e:any){

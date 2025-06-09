@@ -7,6 +7,7 @@ import {
     ArrowRightCircle,
     Calendar,
     DollarSign,
+    DownloadIcon,
     LoaderCircleIcon,
     LucideAlarmClockPlus,
     LucideClock,
@@ -21,7 +22,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { CrudDialogAdapter } from "@/lib/DialogState/CrudDialogAdapter";
 import { computed, onMounted, reactive, ref } from "vue";
 import axios from "axios";
-import { errorToast, navigateLink, PaginationOption, successToast } from "@/lib/utils";
+import { appUrl, errorToast, formatDate, formatWorkingHour, PaginationOption, successToast } from "@/lib/utils";
 import { debounceFilter, watchPausable } from "@vueuse/core";
 import { Input } from "@/shadcn/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/shadcn/ui/select";
@@ -36,6 +37,7 @@ import { Badge } from "@/shadcn/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shadcn/ui/table";
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
     DialogFooter,
@@ -47,7 +49,9 @@ import { Label } from "@/shadcn/ui/label";
 import { usePage } from "@inertiajs/vue3";
 import MapView from "@/Components/MapView.vue";
 import { LngLat } from "@tomtom-international/web-sdk-maps";
-import DateTimePicker from "@/Components/DateTimePicker.vue";
+import dayjs from "dayjs";
+import { Textarea } from "@/shadcn/ui/textarea";
+import CustomLink from "@/Components/CustomLink.vue";
 
 defineOptions({
     layout: LayoutWrapper
@@ -68,6 +72,11 @@ const filterControl = ref({
     orderBy: '',
     location_id: '',
 })
+const filterWatcher = watchPausable(filterControl.value, () => {
+    if (filterControl.value.filterBy && (filterControl.value.sortBy || filterControl.value.location_id)) {
+        getDataset()
+    }
+}, { eventFilter: debounceFilter(800) })
 
 const form = ref({
     user_id: '',
@@ -76,10 +85,10 @@ const form = ref({
     longitude: '',
     code: '',
     note: '',
-    time:'',
-    time_in:undefined,
-    time_out:undefined,
-    status:'in',
+    time: '',
+    time_in: undefined,
+    time_out: undefined,
+    status: 'in',
     attachment: null as File | null
 })
 const locationDataSet = ref([])
@@ -87,8 +96,15 @@ const profile = ref({})
 
 function getDataset() {
     paginationWatcher.pause()
+    filterWatcher.pause()
     isLoading.value = true
-    axios.get(route('employee-presence.json.all',{user:profile.value.id}))
+    axios.get(route('employee-presence.json.all', {
+        user: profile.value.id,
+        location_id: filterControl.value.location_id,
+        status: filterControl.value.sortBy.toLowerCase(),
+        orderBy: filterControl.value.orderBy.id,
+        ...paginateControl
+    }))
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
             dataset.value = dataFromServer.data
             paginateControl.currentPage = dataFromServer.current_page
@@ -104,47 +120,48 @@ function getDataset() {
         })
         .finally(() => {
             paginationWatcher.resume()
+            filterWatcher.resume()
             isLoading.value = false
         })
 }
 
-    // function deleteItem(dataId: number) {
-    //     axios.delete(route('presence-location.json.delete'), { data: { data_id: dataId } })
-    //         .then(({ data: { data: dataFromServer, message, status_code } }) => {
-    //             successToast('Success', message)
-    //             getDataset()
-    //         })
-    //         .catch((err) => {
-    //             errorToast('Error !', err.response.data.message)
-    //         })
-    //         .finally(() => {
-    //         })
-    // }
-const handleSubmit = async () => {
-    isLoading.value = true
-    axios.post(route('employee-presence.json.create', { user: profile.value.id }),form.value)
+function deleteItem(dataId: number) {
+    dialogState.delete.progress = true
+    axios.delete(route('employee-presence.json.delete', { user: profile.value.id }), { data: { id: dataId } })
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
-            if(statusCode != 200){
-                errorToast('Error',message)
-            }
-            locationDataSet.value = dataFromServer.data
-            successToast('Success','Presence Saved')
+            successToast('Success', message)
+            getDataset()
+            dialogState.delete.state = false
+            dialogState.delete.data = undefined
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)
         })
         .finally(() => {
-            paginationWatcher.resume()
-            isLoading.value = false
+            dialogState.delete.progress = false
         })
 }
 
-const formatDate = (date) => {
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-
-    return `${day}/${month}/${year}`;
+const handleSubmit = async () => {
+    isLoading.value = true
+    dialogState.add.progress = true
+    axios.postForm(route('employee-presence.json.create', { user: profile.value.id }), form.value)
+        .then(({ data: { data: dataFromServer, message, status_code } }) => {
+            if (status_code != 200) {
+                errorToast('Error', message)
+            }
+            successToast('Success', 'Presence Saved')
+            dialogState.add.state = false
+            getDataset()
+        })
+        .catch((err) => {
+            console.log(err)
+            errorToast('Error !', err.response.data.message)
+        })
+        .finally(() => {
+            dialogState.add.progress = false
+            isLoading.value = false
+        })
 }
 
 function getAllLocation() {
@@ -225,10 +242,12 @@ async function getCurrentLocation() {
 
 onMounted(async () => {
     await getProfile()
+    await getAllLocation()
     getDataset()
-    getAllLocation()
     await getCurrentLocation()
 })
+
+
 </script>
 
 <template>
@@ -236,6 +255,112 @@ onMounted(async () => {
         <title>Presence History</title>
     </Head>
     <main class="flex-1 items-start gap-4 p-4 sm:px-6 md:gap-4">
+        <Dialog v-model:open="dialogState.delete.state">
+            <DialogContent>
+                <DialogHeader>
+                    Are you sure to delete this presence data ?
+                </DialogHeader>
+                <DialogDescription class="inline-flex items-center gap-2">
+                    This action can't be undone
+                    <loader-circle-icon v-if="dialogState.delete.progress" class="animate-spin"/>
+                </DialogDescription>
+                <DialogFooter>
+                    <div class="space-x-2">
+                        <Button @click="
+                        deleteItem(dialogState.delete.data.id)"
+                                v-bind:disabled="dialogState.delete.progress" class="bg-black">Yes
+                        </Button>
+                        <Button variant="outline">Cancel</Button>
+                    </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        <Dialog v-model:open="dialogState.show.state">
+            <DialogContent class="lg:max-w-screen-md grid-rows-[auto_minmax(0,1fr)_auto] p-0 max-h-[90dvh]">
+                <DialogHeader class="p-6 pb-0">
+                    <DialogTitle>Detail Presence</DialogTitle>
+                    <DialogDescription>
+                        Detailed information about your presence
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="grid gap-4 py-4 overflow-y-auto px-6">
+                    <div class="flex flex-col space-y-4">
+                        <div class="border p-8 rounded-md relative">
+                            <Badge variant="secondary" class="absolute -top-3 left-8">Presence Position</Badge>
+                            <MapView id="map" class="h-[200px] md:h-[400px] col-span-3"
+                                     view-only="true"
+                                     :marker-position="new LngLat(dialogState.show.data.longitude ?? 112.7166368, dialogState.show.data.latitude ?? -7.272563)"
+                                     marker-radius="0"/>
+                        </div>
+                        <div class="border p-8 space-y-4 rounded-md relative">
+                            <Badge variant="secondary" class="absolute -top-3 left-8">Working Hour</Badge>
+                            <div class="grid md:grid-cols-6 items-center gap-4 !mt-0">
+                                <Label for="code" class="col-span-1 md:text-right">Time In</Label>
+                                <VueDatePicker disabled :format="formatDate(dialogState.show.data.time_in)"
+                                               :preview-format="formatDate" class=" col-span-2"
+                                               :modelValue="dialogState.show.data.time_in"/>
+
+                                <Label for="code" class="col-span-1 md:text-right">Working Hour</Label>
+                                <Input disabled class=" col-span-2"
+                                       :model-value="formatWorkingHour(dialogState.show.data.time_in, dialogState.show.data.time_out) || '-'"/>
+
+                            </div>
+
+
+                            <div class="grid md:grid-cols-6 items-center gap-4">
+                                <Label for="code" class="col-span-1 md:text-right">Time Out</Label>
+                                <VueDatePicker disabled :format="formatDate(dialogState.show.data.time_out)"
+                                               :preview-format="formatDate" class="col-span-2 "
+                                               :modelValue="dialogState.show.data.time_out"/>
+
+                                <Label for="code" class="col-span-1 md:text-right">Extended Hour</Label>
+                                <Input disabled class=" col-span-2"
+                                       :model-value="dialogState.show.data.exteded_time || '0'"/>
+                            </div>
+                        </div>
+
+                        <div class="border p-8 space-y-4 rounded-md relative">
+                            <Badge variant="secondary" class="absolute -top-3 left-8">Additional Information</Badge>
+
+                            <div class="grid md:grid-cols-4 items-center gap-4 !mt-0">
+                                <Label for="note" class="md:text-right">Note</Label>
+                                <Textarea disabled :model-value="dialogState.show.data.note" class="col-span-3"/>
+                            </div>
+
+                            <div class="grid md:grid-cols-4 items-center gap-4">
+                                <Label for="note" class="md:text-right">Status By Admin</Label>
+                                <Badge class="place-content-center"
+                                       v-if="dialogState.show.data.status_by_admin == 'pending'"
+                                       variant="warning">Pending
+                                </Badge>
+                                <Badge class="place-content-center"
+                                       v-if="dialogState.show.data.status_by_admin == 'rejected'"
+                                       variant="destructive">Rejected
+                                </Badge>
+                                <Badge class="place-content-center"
+                                       v-if="dialogState.show.data.status_by_admin == 'approved'"
+                                       variant="success">Approved
+                                </Badge>
+                            </div>
+
+                            <div class="grid md:grid-cols-4 items-center gap-4">
+                                <Label for="attachment" class="md:text-right">Attachment</Label>
+                                <a :href="`${appUrl}/storage/${dialogState.show.data.attachment}`" class="inline-flex bg-primary text-white items-center justify-center
+                                 text-sm p-1 rounded-md font-medium gap-2">
+                                    <DownloadIcon size="18"/>
+                                    Download
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter class="p-6 pt-0">
+                    <DialogClose>
+                        <Button variant="destructive">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         <Card>
             <CardHeader>
                 <CardTitle>Employee Presence History</CardTitle>
@@ -311,7 +436,7 @@ onMounted(async () => {
             </CardHeader>
             <CardContent class="h-full max-h-screen overflow-y-scroll">
                 <div class="ml-auto justify-end flex items-center gap-2 px-4">
-                    <Dialog>
+                    <Dialog v-model:open="dialogState.add.state">
                         <DialogTrigger>
                             <Button size="sm"
                                     class="h-7 gap-1 bg-black w-full md:w-fit">
@@ -358,13 +483,17 @@ onMounted(async () => {
                                 <div v-if="$attrs.auth.user.type == 'company'"
                                      class="grid grid-cols-4 items-center gap-4">
                                     <Label for="code" class="text-right">Time In</Label>
-                                    <VueDatePicker :preview-format="formatDate" class="min-w-max" v-model:modelValue="form.time_in" />
+                                    <VueDatePicker :format="formatDate(form.time_in)" :preview-format="formatDate"
+                                                   class="min-w-max"
+                                                   v-model:modelValue="form.time_in"/>
                                 </div>
 
                                 <div v-if="$attrs.auth.user.type == 'company'"
                                      class="grid grid-cols-4 items-center gap-4">
                                     <Label for="code" class="text-right">Time Out</Label>
-                                    <VueDatePicker :preview-format="formatDate" class="min-w-max" v-model:modelValue="form.time_out" />
+                                    <VueDatePicker :format="formatDate(form.time_out)" :preview-format="formatDate"
+                                                   class="min-w-max"
+                                                   v-model:modelValue="form.time_out"/>
                                 </div>
 
                                 <div class="grid grid-cols-4 items-center gap-4">
@@ -386,7 +515,8 @@ onMounted(async () => {
                             </div>
 
                             <DialogFooter>
-                                <Button @click="handleSubmit">
+                                <Button v-bind:disabled="dialogState.add.progress" @click="handleSubmit()">
+                                    <loader-circle-icon v-if="dialogState.add.progress" class="animate-spin"/>
                                     Create Presence
                                 </Button>
                             </DialogFooter>
@@ -402,8 +532,6 @@ onMounted(async () => {
                             <SelectContent>
                                 <SelectItem :value="{id:'location',title:'location'}">location</SelectItem>
                                 <SelectItem :value="{id:'presence_status',title:'presence status'}">presence status
-                                </SelectItem>
-                                <SelectItem :value="{id:'admin_status',title:'status by admin'}">status by admin
                                 </SelectItem>
                             </SelectContent>
                         </Select>
@@ -422,28 +550,34 @@ onMounted(async () => {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div class="w-full inline-flex gap-2" v-if="filterControl.filterBy">
+                        <div class="w-full" v-if="filterControl.filterBy.id == 'presence_status'">
                             <Select v-model="filterControl.sortBy">
                                 <SelectTrigger>
-                                    <ul>{{ filterControl.sortBy.title || 'Value' }}</ul>
+                                    <ul>{{
+                                            filterControl.sortBy || 'Select Status'
+                                        }}
+                                    </ul>
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem :value="{id:'in',title:'In'}">In</SelectItem>
-                                    <SelectItem :value="{id:'out',title:'Out'}">Out</SelectItem>
+                                    <SelectItem value="Pending">Pending</SelectItem>
+                                    <SelectItem value="Rejected">Rejected</SelectItem>
+                                    <SelectItem value="Approved">Approve</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div class="w-full inline-flex gap-2" v-if="filterControl.filterBy">
                             <Select v-model="filterControl.orderBy">
                                 <SelectTrigger>
                                     <ul>{{ filterControl.orderBy.title || 'Order From' }}</ul>
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem :value="{id:'asc',title:'Newest'}">Newest</SelectItem>
-                                    <SelectItem :value="{id:'desc',title:'Oldest'}">Oldest</SelectItem>
+                                    <SelectItem :value="{id:'desc',title:'Newest'}">Newest</SelectItem>
+                                    <SelectItem :value="{id:'asc',title:'Oldest'}">Oldest</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                         <Button
-                            @click="()=>{filterControl.filterBy = '';filterControl.orderBy = '';filterControl.sortBy = ''}"
+                            @click="()=>{filterControl.filterBy = '';filterControl.orderBy = '';filterControl.sortBy = '';filterControl.location_id=undefined}"
                             size="sm" class="h-7 gap-1 bg-black w-full md:w-fit group">
                             <RotateCw class="h-3.5 w-3.5"/>
                             <span class="block md:hidden group-hover:inline sm:not-sr-only sm:whitespace-nowrap">Reset Filter</span>
@@ -467,35 +601,45 @@ onMounted(async () => {
                                 No
                             </TableHead>
                             <TableHead>Date</TableHead>
+                            <TableHead>Time In</TableHead>
+                            <TableHead>Time Out</TableHead>
+                            <TableHead>Working Hour</TableHead>
                             <TableHead>Location</TableHead>
-                            <TableHead>Presence Status</TableHead>
-                            <TableHead class="hidden w-[100px] sm:table-cell text-center text-nowrap">Status By Admin
-                            </TableHead>
+                            <TableHead class="text-center">Admin Status</TableHead>
                             <TableHead class="text-center">
                                 Action
                             </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow v-for="(account,index) in dataset" :key="account.id">
+                        <TableRow v-for="(data,index) in dataset" :key="data.id">
                             <TableCell class="hidden sm:table-cell text-center">
                                 {{ index + 1 }}
                             </TableCell>
                             <TableCell class="font-medium">
-                                {{ account.user_detail?.fullname ?? '-' }}
+                                {{ dayjs(data.time_in).format('DD-MM-YYYY') || '-' }}
                             </TableCell>
                             <TableCell class="font-medium text-ellipsis overflow-ellipsis">
-                                {{ account.user_detail?.phone ?? '-' }}
+                                {{ dayjs(data.time_in).format('HH:mm:ss') || '-' }}
                             </TableCell>
                             <TableCell class="font-medium">
-                                {{ account.user_detail?.address ?? '-' }}
+                                {{ dayjs(data.time_out).format('HH:mm:ss') || '-' }}
+                            </TableCell>
+                            <TableCell class="font-medium">
+                                {{ formatWorkingHour(data.time_in, data.time_out) || '-' }}
+                            </TableCell>
+                            <TableCell class="font-medium">
+                                {{ locationDataSet.find((val) => val.id === data.presence_location_id).name || '-' }}
                             </TableCell>
                             <TableCell class="hidden sm:table-cell text-center">
-                                <Badge v-if="!account.is_suspended" variant="success">
-                                    Active
+                                <Badge v-if="data.status_by_admin == 'pending'" variant="warning">
+                                    {{ data.status_by_admin }}
                                 </Badge>
-                                <Badge v-else variant="destructive">
-                                    Suspended
+                                <Badge v-else-if="data.status_by_admin == 'rejected'" variant="destructive">
+                                    {{ data.status_by_admin }}
+                                </Badge>
+                                <Badge v-else variant="success">
+                                    {{ data.status_by_admin }}
                                 </Badge>
                             </TableCell>
                             <TableCell class="text-center">
@@ -513,11 +657,11 @@ onMounted(async () => {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         <DropdownMenuItem
-                                            @click="()=>{navigateLink(route('employee-account.detail',{id:account.id}))}"
-                                            class="cursor-pointer">View Account
+                                            @click="dialogState.show.state = true;dialogState.show.data = data"
+                                            class="cursor-pointer">View Detail
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            @click="dialogState.delete.data = account;dialogState.delete.state = true"
+                                            @click="dialogState.delete.data = data;dialogState.delete.state = true"
                                             class="cursor-pointer">Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -525,7 +669,7 @@ onMounted(async () => {
                             </TableCell>
                         </TableRow>
                         <TableRow v-if="!dataset || dataset.length == 0">
-                            <TableCell colspan="4" class="text-center">
+                            <TableCell colspan="7" class="text-center">
                                 <div class="inline-flex gap-2 items-center text-lg">
                                     <TriangleAlert class="text-destructive animate-pulse"/>
                                     Tidak ada data
@@ -547,7 +691,7 @@ onMounted(async () => {
                     <div class="text-xs text-muted-foreground">
                         Showing <strong>{{ paginateControl.from }}-{{ paginateControl.to }}</strong> of
                         <strong>{{ paginateControl.totalData }}</strong>
-                        location
+                        data
                     </div>
                     <div class="text-xs text-muted-foreground grid grid-flow-col space-x-4">
                         <Button @click="()=>paginateControl.currentPage--" v-if="paginateControl.prevPageUrl"

@@ -10,6 +10,7 @@ use App\Models\PresenceManagement\PresenceLocation;
 use App\Models\PresenceManagement\PresenceVerification;
 use App\Models\UserManagement\User;
 use App\PositionHelper;
+use Dentro\Yalr\Attributes\Delete;
 use Dentro\Yalr\Attributes\Get;
 use Dentro\Yalr\Attributes\Middleware;
 use Dentro\Yalr\Attributes\Name;
@@ -18,6 +19,7 @@ use Dentro\Yalr\Attributes\Prefix;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -40,16 +42,30 @@ class EmployeePresenceController extends Controller
 
         $data = PresenceEmployee::query()
             ->where('user_id', $user->id)
-            ->when($request->has('presence_location_id'), function ($query) use ($request) {
-                $query->where('presence_location_id', $request->input('presence_location_id'));
+            ->when(!empty($request->status), function ($query) use ($request) {
+                return $query->where('status_by_admin',  $request->get('status'));
             })
-            ->when($request->has('time'), function ($query) use ($request) {
-                $query->whereBetween('time', [$request->input('time')['start'], $request->input('time')['end']]);
+            ->when(!empty($request->location_id), function ($query) use ($request) {
+                return $query->where('presence_location_id', $request->get('location_id'));
             })
-            ->paginate(10)
+            ->orderBy('time_in',$request->orderBy ?? 'desc')
+            ->paginate(10,page: $request->currentPage ?? 1)
             ->withQueryString();
 
         return new JsonBody($data);
+    }
+
+    #[Delete('/{user}/delete/json', '.json.delete', ['scope-company','only-company'])]
+    public function deleteData(request $request, User $user)
+    {
+        $request->validate(['id' => 'required|numeric|exists:presence_employees,id']);
+
+        try{
+            PresenceEmployee::query()->find($request->id)->delete();
+        }catch (\Exception $exception){
+            return new JsonBody(null,message: 'Delete failed caused by '. $exception->getMessage());
+        }
+        return new JsonBody(null,message: 'Presence successfuly deleted');
     }
 
     #[Post('{user}/create/json', '.json.create', ['scope-company'])]
@@ -154,8 +170,13 @@ class EmployeePresenceController extends Controller
             $attachment = $request->file('attachment');
             $timestamp = now()->format('YmdHis');
             $filename = "$timestamp." . $attachment->getClientOriginalExtension();
-            Storage::putFileAs("/attendance/attachment/{$request->get('user_id')}/", $attachment, $filename);
-            $employeePresence->attachment = "/attendance/attachment/{$request->get('user_id')}/$filename";
+
+            // Simpan ke public storage path
+            $path = "attendance/attachment/{$request->get('user_id')}";
+            Storage::putFileAs("public/$path", $attachment, $filename);
+
+            // Simpan path ke DB (tanpa "public/")
+            $employeePresence->attachment = "$path/$filename";
         }
 
         if (Auth::user()->isCompany()) {

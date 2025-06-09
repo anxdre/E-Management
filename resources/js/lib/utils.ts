@@ -1,11 +1,21 @@
+import type { Updater } from '@tanstack/vue-table'
+import type { Ref } from 'vue'
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { router } from "@inertiajs/vue3";
 import { useGlobalLoaderStrore } from "@/lib/GlobalLoaderStore";
 import { toast, useToast } from "@/shadcn/ui/toast";
+import dayjs, { ConfigType } from "dayjs";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
+}
+
+export function valueUpdater<T extends Updater<any>>(updaterOrValue: T, ref: Ref) {
+    ref.value
+        = typeof updaterOrValue === 'function'
+        ? updaterOrValue(ref.value)
+        : updaterOrValue
 }
 
 export const imgFolder = '../../../img/'
@@ -106,3 +116,28 @@ export function createFormData(values) {
     })
     return formData
 }
+
+export function formatWorkingHour(inTime:string, outTime:string) {
+    if (!inTime || !outTime) return null;
+    const ms = dayjs(outTime).diff(dayjs(inTime))
+    const totalSec = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSec / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
+
+export const formatDate = (dateRaw) => {
+    if (!dateRaw) return '-'
+    const date = new Date(dateRaw)
+
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const time = dayjs(dateRaw).format('HH:mm:ss')
+
+    return `${day}/${month}/${year} ${time}`;
+}
+
+export const appUrl = import.meta.env.VITE_APP_URL
