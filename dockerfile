@@ -1,55 +1,69 @@
-# Stage 1: build
-FROM node:20-alpine as build
+# Stage 1: Build frontend with pnpm
+FROM node:20-alpine as frontend
 
 WORKDIR /app
 
-# Copy file Node & PNPM
 COPY package.json pnpm-lock.yaml ./
 
-# Install pnpm & dependencies
 RUN npm install -g pnpm && pnpm install
 
-# Copy semua source
 COPY . .
 
-# Build vite (pastikan ziggy udah dihandle)
 RUN pnpm run build
 
 
-# Stage 2: final Laravel
+# Stage 2: Laravel with PHP-FPM + NGINX
 FROM php:8.2-fpm-alpine
 
-# Install deps PHP
-RUN apk add --no-cache bash zip unzip curl git supervisor libpng-dev libjpeg-turbo-dev libwebp-dev libzip-dev oniguruma-dev icu-dev libxml2-dev \
-    && docker-php-ext-install pdo pdo_mysql zip intl mbstring fileinfo bcmath
+# Install PHP extensions & system tools
+RUN apk add --no-cache \
+    bash git curl zip unzip supervisor nginx \
+    icu-dev zlib-dev libzip-dev oniguruma-dev \
+    libpng-dev jpeg-dev freetype-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd pdo pdo_mysql mbstring zip intl bcmath opcache
+
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Buat user non-root (optional)
-RUN adduser -D appuser
-
+# Copy project
 WORKDIR /var/www
 
-# Copy source dari builder
-COPY --from=build /app /var/www
+COPY . .
 
-# Set permission
-RUN chown -R appuser:appuser /var/www
+# Copy built frontend from Stage 1
+COPY --from=frontend /app/public /var/www/public
 
-# Laravel setup
-USER appuser
+# Set permissions
+RUN chmod -R 775 storage bootstrap/cache && \
+    chown -R www-data:www-data storage bootstrap/cache
 
-# Install dependencies PHP
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+# Install Telescope secara eksplisit
+RUN composer require laravel/telescope --no-interaction
 
-# Generate Telescope assets & migrate (optional)
-RUN php artisan telescope:publish \
-    && php artisan migrate --force \
-    && php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# Production PHP deps
+RUN composer install --optimize-autoloader --no-dev
 
-EXPOSE 9000
+# Set PHP Opcache
+RUN echo "opcache.enable=1\n\
+opcache.memory_consumption=128\n\
+opcache.interned_strings_buffer=8\n\
+opcache.max_accelerated_files=4000\n\
+opcache.validate_timestamps=0\n" > /usr/local/etc/php/conf.d/opcache.ini
 
-CMD ["php-fpm"]
+# NGINX config
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/default.conf /etc/nginx/conf.d/default.conf
+
+# Supervisor config
+COPY docker/supervisord.conf /etc/supervisord.conf
+
+#take ownership
+WORKDIR /var/www
+RUN chown -R www-data:www-data .
+RUN chmod -R 755 .
+
+EXPOSE 8181
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
