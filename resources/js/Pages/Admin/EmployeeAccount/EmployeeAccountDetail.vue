@@ -194,7 +194,7 @@ onMounted(() => {
                                     <Avatar @click="()=>{(isEditing || isCreate) && open()}" class="size-64 md:mt-4"
                                             :class="isEditing || isCreate ? cn('cursor-pointer') : '' ">
                                         <AvatarImage :src="profileImage ?? ''"></AvatarImage>
-                                        <AvatarImage :src="assets()"></AvatarImage>
+                                        <AvatarImage :src="profileImage ?? ''"></AvatarImage>
                                         <AvatarFallback>Profile Picture</AvatarFallback>
                                     </Avatar>
                                 </TooltipTrigger>
