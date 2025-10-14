@@ -6,6 +6,9 @@ use App\Http\Controllers\EmailController;
 use App\Http\Controllers\Employee\EmployeeAccountController;
 use App\Http\Controllers\Employee\EmployeeGroupController;
 use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\Payroll\CompanySalaryController;
+use App\Http\Controllers\Payroll\CompanyPayrollReceiptController;
+use App\Http\Controllers\Payroll\EmployeeReceiptController;
 use App\Http\Controllers\Presence\EmployeePresenceController;
 use App\Http\Controllers\Presence\PresenceLocationController;
 use App\Http\Controllers\Presence\PresenceVerificationController;
@@ -45,7 +48,7 @@ return [
         ],
         'api' => [
             'middleware' => 'api',
-            'prefix' => 'api',
+            'prefix' => '',
         ],
     ],
 
@@ -76,8 +79,16 @@ return [
         PresenceVerificationController::class,
         EmployeePresenceController::class,
 
+        //payroll
+        CompanySalaryController::class,
+        EmployeeReceiptController::class,
+
+        //receipt
+        CompanyPayrollReceiptController::class
+
     ],
     'api' => [
         /** @inject api **/
+        AuthController::class,
     ],
 ];

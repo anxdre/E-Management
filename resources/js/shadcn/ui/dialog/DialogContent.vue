@@ -12,16 +12,28 @@ import {
 import { Cross2Icon } from '@radix-icons/vue'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<DialogContentProps & { class?: HTMLAttributes['class'] }>()
+const props = defineProps<DialogContentProps & { class?: HTMLAttributes['class'],disableDismiss?: boolean }>()
 const emits = defineEmits<DialogContentEmits>()
 
 const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
+  const { class: _,disableDismiss, ...delegated } = props
 
   return delegated
 })
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
+
+function onInteractOutside(event:any) {
+    if (props.disableDismiss){
+    event.preventDefault()
+    }
+}
+
+function onEscapeKeyDown(event:any) {
+    if (props.disableDismiss){
+        event.preventDefault()
+    }
+}
 </script>
 
 <template>
@@ -30,6 +42,9 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       class="fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
     />
     <DialogContent
+        @interactOutside="onInteractOutside"
+        @pointerDownOutside="onInteractOutside"
+        @escapeKeyDown="onEscapeKeyDown"
       v-bind="forwarded"
       :class="
         cn(

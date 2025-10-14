@@ -128,7 +128,7 @@ export function formatWorkingHour(inTime:string, outTime:string) {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-export const formatDate = (dateRaw) => {
+export const formatDate = (dateRaw,withTime:boolean = true) => {
     if (!dateRaw) return '-'
     const date = new Date(dateRaw)
 
@@ -137,7 +137,19 @@ export const formatDate = (dateRaw) => {
     const year = date.getFullYear();
     const time = dayjs(dateRaw).format('HH:mm:ss')
 
+    if (!withTime) return `${day}/${month}/${year}`
+
     return `${day}/${month}/${year} ${time}`;
 }
 
 export const appUrl = import.meta.env.VITE_APP_URL
+
+export function showGlobalLoader() {
+    useGlobalLoaderStrore().isLoading = true
+    useGlobalLoaderStrore().darkenBg = true
+}
+
+export function hideGlobalLoader() {
+    useGlobalLoaderStrore().isLoading = false
+    useGlobalLoaderStrore().darkenBg = false
+}

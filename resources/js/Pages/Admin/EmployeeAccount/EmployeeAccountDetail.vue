@@ -4,7 +4,7 @@ import { z } from "zod";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shadcn/ui/form";
 import { vAutoAnimate } from "@formkit/auto-animate";
 import { useForm } from "vee-validate";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, useAttrs } from "vue";
 import { Input } from "@/shadcn/ui/input";
 import { Button } from "@/shadcn/ui/button";
 import { ChevronLeft, LoaderCircleIcon, MapPinCheck, NotepadText, PencilIcon } from "lucide-vue-next";
@@ -20,7 +20,7 @@ import { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxPortal, Combobo
 import { CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/shadcn/ui/command'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete } from '@/shadcn/ui/tags-input'
 import { Label } from "@/shadcn/ui/label";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 
 defineOptions({
     layout: LayoutWrapper
@@ -143,25 +143,6 @@ onMounted(() => {
 
 <template>
     <main class="grid flex-1 items-start gap-4 p-4 sm:px-6 md:gap-4">
-        <!--        <Dialog>-->
-        <!--            <DialogContent>-->
-        <!--                <DialogHeader>-->
-        <!--                    <DialogTitle>Delete {{dialogState.delete.data.name}} Group</DialogTitle>-->
-        <!--                    <DialogDescription>-->
-        <!--                        After deletion, all of employee in this group will be still remaining,-->
-        <!--                        <br> Are you sure to perform this action ? deleted data cannot be undone.-->
-        <!--                    </DialogDescription>-->
-        <!--                </DialogHeader>-->
-        <!--                <DialogFooter>-->
-        <!--                    <DialogClose as-child>-->
-        <!--                        <Button type="button" variant="secondary">-->
-        <!--                            Close-->
-        <!--                        </Button>-->
-        <!--                    </DialogClose>-->
-        <!--                    <Button @click="deleteItem(dialogState.delete.data.id)">Delete</Button>-->
-        <!--                </DialogFooter>-->
-        <!--            </DialogContent>-->
-        <!--        </Dialog>-->
         <Card class="overflow-scroll">
             <CardHeader>
                 <CardTitle @click="navigateLink(route('employee-account.index'))"
@@ -207,7 +188,7 @@ onMounted(() => {
                         <span v-else
                               class="text-xs text-muted-foreground">*don't forget to save before leaving the page</span>
                         <div v-if="!isCreate && !isEditing " class="w-full flex flex-col items-center space-y-2">
-                            <Button class="w-full gap-4">
+                            <Button @click="navigateLink(route('employee-payroll.user.index',{user:$page.props.auth.user.id,employee:props.account.id}))" class="w-full gap-4">
                                 <NotepadText/>
                                 Manage Employee Salary
                             </Button>

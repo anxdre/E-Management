@@ -3,15 +3,19 @@
 namespace App\Models\UserManagement;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Payroll\CompanySalary;
+use App\Models\Payroll\EmployeeSalary;
 use App\Models\PresenceManagement\PresenceEmployee;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -79,5 +83,23 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isEmployee(): bool
     {
         return !is_null($this->company_id);
+    }
+
+    public function salaries()
+    {
+        return $this->belongsToMany(CompanySalary::class, 'employee_salary', 'user_id', 'company_salary_id')
+            ->using(EmployeeSalary::class)
+            ->withPivot(['available_to_request', 'included_at_default'])
+            ->withTimestamps();
+    }
+
+    public function defaultSalaries()
+    {
+        return $this->salaries()->wherePivot('included_at_default', true);
+    }
+
+    public function requestableSalaries()
+    {
+        return $this->salaries()->wherePivot('available_to_request', true);
     }
 }

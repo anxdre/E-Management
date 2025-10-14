@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleUser, Menu, UsersRound,UserRound } from "lucide-vue-next";
+import { CircleUser, Menu, UsersRound,UserRound,HandCoins, Scale,MapPinHouse,UserCheck} from "lucide-vue-next";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, } from '@/shadcn/ui/sheet'
 import { Button } from "@/shadcn/ui/button";
 import {
@@ -38,26 +38,21 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                         Presence
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent class="space-y-2 px-0 py-1">
+                <PopoverContent class="space-y-2 px-0 py-1 w-fit">
                     <ul>
                         <Button @click="navigateLink(route('presence-location.index'))"
                                 variant="ghost"
-                                class="hover:text-foreground justify-start w-full rounded">
+                                class="hover:text-foreground justify-start w-full rounded gap-2">
+                            <MapPinHouse size="18"/>
                             Presence Location
                         </Button>
                     </ul>
                     <ul>
                         <Button @click="navigateLink(route('dashboard.index'))"
                                 variant="ghost"
-                                class="hover:text-foreground justify-start w-full rounded">
+                                class="hover:text-foreground justify-start w-full rounded gap-2">
+                            <UserCheck size="18"/>
                             Employee Presence
-                        </Button>
-                    </ul>
-                    <ul>
-                        <Button @click="navigateLink(route('dashboard.index'))"
-                                variant="ghost"
-                                class="hover:text-foreground justify-start w-full rounded">
-                            Dashboard
                         </Button>
                     </ul>
                 </PopoverContent>
@@ -101,19 +96,19 @@ import { Popover, PopoverContent, PopoverTrigger, } from '@/shadcn/ui/popover'
                 </PopoverTrigger>
                 <PopoverContent class="space-y-2 px-0 py-1 w-fit">
                     <ul>
-                        <Button @click="navigateLink(route('employee-group.index'))"
+                        <Button @click="navigateLink(route('company-payroll.index',{user:$attrs.auth.user?.id}))"
                                 variant="ghost"
                                 class="hover:text-foreground gap-2 justify-start w-full rounded">
-                            <UsersRound size="18"/>
-                            Employee Group
+                            <Scale size="18"/>
+                            Company Salary
                         </Button>
                     </ul>
                     <ul>
-                        <Button @click="navigateLink(route('employee-account.index'))"
+                        <Button @click="navigateLink(route('company-receipt.index',{user:$attrs.auth.user?.id}))"
                                 variant="ghost"
                                 class="hover:text-foreground gap-2 justify-start w-full rounded">
-                            <UserRound size="18"/>
-                            Employee Account
+                            <HandCoins size="18"/>
+                            Employee Payroll
                         </Button>
                     </ul>
                 </PopoverContent>

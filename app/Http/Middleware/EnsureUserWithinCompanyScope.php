@@ -29,8 +29,14 @@ class EnsureUserWithinCompanyScope
 
         $current = auth()->user();
 
-        if ($current->isCompany() && $targetUser->company_id !== $current->id) {
-            abort(403, 'Forbidden access.');
+
+        if ($current->isCompany()) {
+            $isSelf = $targetUser->id === $current->id;
+            $isEmployee = $targetUser->company_id === $current->id;
+
+            if (!$isSelf && !$isEmployee) {
+                abort(403, 'Forbidden access.');
+            }
         }
 
         if ($current->isEmployee() && $current->id !== $targetUser->id) {

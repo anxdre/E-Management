@@ -90,6 +90,19 @@ class EmployeeAccountController extends Controller
         return new JsonBody($data);
     }
 
+    #[Get('/all/by-group/json', '.json.group')]
+    public function getAccountByGroup(request $request)
+    {
+        $request->validate(['group_id' => 'required|numeric|exists:company_groups,id']);
+
+        $data = CompanyGroup::query()->with(['employee','employee.userDetail'])
+            ->where('user_id', Auth::id())
+            ->where('id',$request->group_id)
+            ->first();
+
+        return new JsonBody($data->employee);
+    }
+
     #[Post('/add/json', '.json.add')]
     public function addAccount(Request $request)
     {
