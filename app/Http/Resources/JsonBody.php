@@ -7,15 +7,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class JsonBody extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
-    private  $message, $status_code;
+    private string $message;
+    private int $status_code;
 
     /**
-     * @param $resource
+     * @param mixed $resource
      * @param string $message
      * @param int $status_code
      */
@@ -26,14 +22,16 @@ class JsonBody extends JsonResource
         $this->status_code = $status_code;
     }
 
-//public function __construct($resource)
-//{
-//    parent::__construct($resource);
-//}
-
-
     public function toArray(Request $request): array
     {
-        return ['data' => $this->resource, 'message' => $this->message, 'status_code' => $this->status_code];
+        return [
+            'data' => $this->resource,
+            'message' => $this->message,
+        ];
+    }
+
+    public function withResponse($request, $response)
+    {
+        $response->setStatusCode($this->status_code);
     }
 }

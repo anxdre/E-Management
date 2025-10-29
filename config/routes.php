@@ -5,10 +5,12 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\Employee\EmployeeAccountController;
 use App\Http\Controllers\Employee\EmployeeGroupController;
+use App\Http\Controllers\MobileApi\LocationApiController;
+use App\Http\Controllers\MobileApi\PrensenceApiController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\Payroll\CompanySalaryController;
 use App\Http\Controllers\Payroll\CompanyPayrollReceiptController;
-use App\Http\Controllers\Payroll\EmployeeReceiptController;
+use App\Http\Controllers\Payroll\EmployeePayrollTypeController;
 use App\Http\Controllers\Presence\EmployeePresenceController;
 use App\Http\Controllers\Presence\PresenceLocationController;
 use App\Http\Controllers\Presence\PresenceVerificationController;
@@ -81,7 +83,7 @@ return [
 
         //payroll
         CompanySalaryController::class,
-        EmployeeReceiptController::class,
+        EmployeePayrollTypeController::class,
 
         //receipt
         CompanyPayrollReceiptController::class
@@ -90,5 +92,7 @@ return [
     'api' => [
         /** @inject api **/
         AuthController::class,
+        PrensenceApiController::class,
+        LocationApiController::class,
     ],
 ];
