@@ -1,0 +1,39 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('presence_employees', function (Blueprint $table) {
+            $table->increments('id');
+            $table->integer('user_id');
+            $table->integer('presence_location_id');
+            $table->integer('presence_verification_id');
+            $table->double('latitude');
+            $table->double('longitude');
+            $table->dateTime('time_in');
+            $table->dateTime('time_out');
+            $table->dateTime('extended_time')->nullable();
+            $table->text('note')->nullable();
+            $table->string('attachment')->nullable();
+            $table->enum('status_by_admin', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->dateTime('created_at')->nullable();
+            $table->dateTime('updated_at')->nullable();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('presence_employees');
+    }
+};

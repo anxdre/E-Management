@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\Employee\EmployeeAccountController;
 use App\Http\Controllers\Employee\EmployeeGroupController;
+use App\Http\Controllers\MobileApi\AuthApiController;
 use App\Http\Controllers\MobileApi\LocationApiController;
 use App\Http\Controllers\MobileApi\PrensenceApiController;
 use App\Http\Controllers\PasswordController;
@@ -91,7 +92,7 @@ return [
     ],
     'api' => [
         /** @inject api **/
-        AuthController::class,
+        AuthApiController::class,
         PrensenceApiController::class,
         LocationApiController::class,
     ],

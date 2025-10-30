@@ -25,6 +25,7 @@ class JsonBody extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'status_code' => $this->status_code,
             'data' => $this->resource,
             'message' => $this->message,
         ];
