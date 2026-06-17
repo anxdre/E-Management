@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserDetail extends Model
 {
-    protected $table = 'user_details';
+    protected $table = 'mst_user_details';
     protected $guarded = ['id'];
     use HasFactory;
 

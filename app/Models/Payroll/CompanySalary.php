@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class CompanySalary extends Model
 {
     use HasFactory;
-    protected $table = "company_salary";
+    protected $table = "mst_company_salary";
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -17,7 +17,7 @@ class CompanySalary extends Model
     ];
 
     public function employeeSalary(){
-        return $this->belongsToMany(User::class, 'employee_salary','company_salary_id','user_id')
+        return $this->belongsToMany(User::class, 'pivot_employee_salary','mst_company_salary_id','mst_user_id')
             ->using(EmployeeSalary::class)
             ->withPivot(['available_to_request','included_at_default']);
     }

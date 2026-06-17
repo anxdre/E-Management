@@ -2,17 +2,21 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "ext-openssl": "*",
         "dentro/yalr": "^1.3",
         "inertiajs/inertia-laravel": "^1.0",
         "laravel/framework": "^11.9",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.9",
-        "tightenco/ziggy": "^2.0",
-        "ext-openssl": "*"
+        "maatwebsite/excel": "^3.1",
+        "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -68,6 +72,21 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.2"
+        },
+        "audit": {
+            "ignore": [
+                "PKSA-mdq4-51ck-6kdq",
+                "PKSA-8qx3-n5y5-vvnd",
+                "PKSA-q46n-4fdk-zjr4",
+                "PKSA-qzrn-rnz3-85w1",
+                "PKSA-w7xr-vk7n-rstm",
+                "PKSA-njrm-6dtg-m2pc",
+                "PKSA-p3rx-dfwp-73ny",
+                "PKSA-ckwp-rt7t-c46m"
+            ]
         }
     },
     "minimum-stability": "stable",

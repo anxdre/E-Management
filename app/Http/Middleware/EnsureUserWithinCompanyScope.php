@@ -32,7 +32,7 @@ class EnsureUserWithinCompanyScope
 
         if ($current->isCompany()) {
             $isSelf = $targetUser->id === $current->id;
-            $isEmployee = $targetUser->company_id === $current->id;
+            $isEmployee = $targetUser->mst_company_id === $current->id;
 
             if (!$isSelf && !$isEmployee) {
                 abort(403, 'Forbidden access.');

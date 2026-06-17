@@ -10,6 +10,6 @@ class GroupHasUser extends Pivot
     use HasFactory;
 
     protected $guarded = ['id'];
-    protected $table = 'group_has_users';
+    protected $table = 'pivot_group_has_users';
     public $incrementing = true;
 }

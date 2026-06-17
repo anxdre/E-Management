@@ -7,16 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class CompanyGroup extends Model
 {
-    protected $table = 'company_groups';
+    protected $table = 'mst_company_groups';
     protected $guarded = ['id'];
     use HasFactory;
 
     public function company()
     {
-        return $this->belongsTo(User::class, 'company_id','id');
+        return $this->belongsTo(User::class, 'mst_user_id','id');
     }
 
     public function employee(){
-        return $this->belongsToMany(User::class, 'group_has_users','group_id','user_id');
+        return $this->belongsToMany(User::class, 'pivot_group_has_users','mst_company_group_id','mst_user_id');
     }
 }
