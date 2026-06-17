@@ -8,6 +8,7 @@ import {
     Calendar,
     DollarSign,
     DownloadIcon,
+    FileSpreadsheet,
     LoaderCircleIcon,
     LucideAlarmClockPlus,
     LucideClock,
@@ -79,7 +80,7 @@ const filterWatcher = watchPausable(filterControl.value, () => {
 }, { eventFilter: debounceFilter(800) })
 
 const form = ref({
-    user_id: '',
+    mst_user_id: '',
     location_id: '',
     latitude: '',
     longitude: '',
@@ -142,6 +143,18 @@ function deleteItem(dataId: number) {
         })
 }
 
+function exportExcel() {
+    const params = {
+        status: filterControl.value.sortBy,
+        location_id: filterControl.value.location_id,
+        date_start: '',
+        date_end: '',
+        orderBy: filterControl.value.orderBy?.id || 'desc',
+    }
+    const url = route('employee-presence.export.excel', { user: profile.value.id, ...params })
+    window.open(url, '_blank')
+}
+
 const handleSubmit = async () => {
     isLoading.value = true
     dialogState.add.progress = true
@@ -191,7 +204,7 @@ async function getProfile() {
         const response = await axios.get(route('employee-account.json.detail', { user: userId }))
         const { data: dataFromServer, message, status_code } = response.data
         profile.value = dataFromServer
-        form.value.user_id = dataFromServer.id
+        form.value.mst_user_id = dataFromServer.id
     } catch (err) {
         errorToast('Error', 'Profile not loaded yet, please reload the page')
     } finally {
@@ -436,6 +449,10 @@ onMounted(async () => {
             </CardHeader>
             <CardContent class="h-full max-h-screen overflow-y-scroll">
                 <div class="ml-auto justify-end flex items-center gap-2 px-4">
+                    <Button @click="exportExcel()" size="sm" class="h-7 gap-1" variant="outline">
+                        <FileSpreadsheet class="h-3.5 w-3.5"/>
+                        <span class="sm:not-sr-only sm:whitespace-nowrap">Export Excel</span>
+                    </Button>
                     <Dialog v-model:open="dialogState.add.state">
                         <DialogTrigger>
                             <Button size="sm"
@@ -480,7 +497,7 @@ onMounted(async () => {
                                     <Input id="code" v-model="form.code" class="col-span-3"/>
                                 </div>
 
-                                <div v-if="$attrs.auth.user.type == 'company'"
+                                <div v-else
                                      class="grid grid-cols-4 items-center gap-4">
                                     <Label for="code" class="text-right">Time In</Label>
                                     <VueDatePicker :format="formatDate(form.time_in)" :preview-format="formatDate"
@@ -488,7 +505,7 @@ onMounted(async () => {
                                                    v-model:modelValue="form.time_in"/>
                                 </div>
 
-                                <div v-if="$attrs.auth.user.type == 'company'"
+                                <div v-if="$attrs.auth.user.type != 'employee'"
                                      class="grid grid-cols-4 items-center gap-4">
                                     <Label for="code" class="text-right">Time Out</Label>
                                     <VueDatePicker :format="formatDate(form.time_out)" :preview-format="formatDate"
@@ -629,7 +646,7 @@ onMounted(async () => {
                                 {{ formatWorkingHour(data.time_in, data.time_out) || '-' }}
                             </TableCell>
                             <TableCell class="font-medium">
-                                {{ locationDataSet.find((val) => val.id === data.presence_location_id).name || '-' }}
+                                {{ locationDataSet.find((val) => val.id === data.mst_presence_location_id)?.name || '-' }}
                             </TableCell>
                             <TableCell class="hidden sm:table-cell text-center">
                                 <Badge v-if="data.status_by_admin == 'pending'" variant="warning">

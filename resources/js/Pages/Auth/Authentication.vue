@@ -35,12 +35,15 @@ const isSignUp = ref(false)
                 <div class="grid gap-4">
                     <FormSignIn/>
                 </div>
-                <div class="mt-4 text-center text-sm">
-                    Don't have an account?
-                    <span @click="isSignUp = true" class="underline cursor-pointer">
-                        Sign up
-                    </span>
-                </div>
+<!--                <div class="mt-4 text-center text-sm">-->
+<!--                    Don't have an account?-->
+<!--&lt;!&ndash;                    <span @click="isSignUp = true" class="underline cursor-pointer">&ndash;&gt;-->
+<!--&lt;!&ndash;                        Sign up&ndash;&gt;-->
+<!--&lt;!&ndash;                    </span>&ndash;&gt;-->
+<!--                    <span>-->
+<!--                        Contact your administrator-->
+<!--                    </span>-->
+<!--                </div>-->
             </div>
         </div>
         <div class="hidden bg-muted lg:block">

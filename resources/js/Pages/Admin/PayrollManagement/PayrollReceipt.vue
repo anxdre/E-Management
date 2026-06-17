@@ -5,6 +5,7 @@ import {
     ArrowRightCircle,
     CalendarIcon,
     CircleX,
+    DownloadIcon,
     LoaderCircleIcon,
     MoreHorizontal,
     PlusCircle,
@@ -248,6 +249,16 @@ function editData(data: any) {
 
 function deleteAssignedEmployee(index) {
     generateForm.value.assigned_to.splice(index, 1)
+}
+
+function exportExcel() {
+    const params = {
+        search: paginateControl.searchQuery,
+        date_start: dateFilter.value.start?.toDate('Asia/Jakarta'),
+        date_end: dateFilter.value.end?.toDate('Asia/Jakarta'),
+    }
+    const url = route('company-receipt.export.excel', { ...params, user: companySalaryForm.value.user_id })
+    window.open(url, '_blank')
 }
 
 function addData() {
@@ -533,6 +544,10 @@ onMounted(async () => {
                 <CardDescription class="inline-flex justify-between items-center">
                     Manage your company payroll receipt and manage employee payroll related settings.
                     <div class="ml-auto flex items-center gap-2">
+                        <Button @click="exportExcel()" size="sm" class="h-7 gap-1" variant="outline">
+                            <DownloadIcon class="h-3.5 w-3.5"/>
+                            <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">Export Excel</span>
+                        </Button>
                         <Button @click="addData()" size="sm" class="h-7 gap-1 bg-black">
                             <PlusCircle class="h-3.5 w-3.5"/>
                             <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">Generate Payroll</span>
@@ -603,7 +618,7 @@ onMounted(async () => {
                                 </Badge>
                             </TableCell>
                             <TableCell class="text-center">
-                                {{ dayjs(data.date).format('DD/MM/YYYY') }}
+                                {{ dayjs(data.start_date).format('DD/MM/YYYY') }}
                             </TableCell>
                             <TableCell class="text-center">
                                 {{ dayjs(data.created_at).format('DD/MM/YYYY HH:mm') }}
@@ -626,7 +641,7 @@ onMounted(async () => {
                                             @click="()=>{editData(data)}"
                                             class="cursor-pointer">Detail / Edit
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem
+                                        <DropdownMenuItem v-if="data.status == 'pending' || !data.status"
                                             @click="dialogState.delete.data = data;dialogState.delete.state = true"
                                             class="cursor-pointer">Delete
                                         </DropdownMenuItem>

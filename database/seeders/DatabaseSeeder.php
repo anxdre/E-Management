@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\UserManagement\User;
+use App\Models\UserManagement\UserDetail;
 use Illuminate\Database\Seeder;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -16,9 +17,19 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        UserDetail::query()->create([
+            'id' => 1,
+            'fullname' => 'Administrator',
+            'phone' => '000000000',
+            'address' => 'Address',
+        ]);
+
+        User::query()->create([
+            'email' => 'admin@admin.com',
+            'password' => bcrypt('Password123'),
+            'type' => 'superadmin',
+            'email_verified_at' => now(),
+            'mst_user_detail_id' => 1,
         ]);
     }
 }

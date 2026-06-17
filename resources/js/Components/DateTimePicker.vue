@@ -29,6 +29,11 @@ import { Button } from '@/shadcn/ui/button'
 import { CalendarIcon } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
+dayjs.tz.setDefault('Asia/Jakarta')
+
 // Props & Emit
 const modelValue = defineModel<Date | null>()
 const internalValue = ref(modelValue.value)

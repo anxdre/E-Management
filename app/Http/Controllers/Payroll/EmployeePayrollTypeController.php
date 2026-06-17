@@ -41,7 +41,15 @@ class EmployeePayrollTypeController extends Controller
             return new JsonBody(null, 'Data not found', 404);
         }
 
-        $data = SalaryReceipt::query()->with(['user.userDetail','user.company.userDetail', 'companySalaryItem'])->find($payroll);
+        $data = SalaryReceipt::query()
+            ->with(['user.userDetail', 'user.company.userDetail', 'companySalaryItem'])
+            ->find($payroll);
+
+        $data->total_subtract = $data->companySalaryItem
+            ->where('calculation_type', 'subtract')
+            ->where('is_tax', false)
+            ->sum('salary');
+
         return new JsonBody($data);
     }
 
@@ -49,7 +57,7 @@ class EmployeePayrollTypeController extends Controller
     public function getAllPayroll(Request $request)
     {
         $data = CompanySalary::query()
-            ->where('user_id', Auth::id())
+//            ->where('mst_user_id', Auth::id())
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%$request->search%");
             })
@@ -61,13 +69,13 @@ class EmployeePayrollTypeController extends Controller
     #[Post('/add/json', '.json.add')]
     public function requestPayroll(User $user, Request $request)
     {
-        $request->validate(['company_salary_id' => 'required|exists:company_salary,id',
+        $request->validate(['company_salary_id' => 'required|exists:mst_company_salary,id',
             'salary' => 'required|numeric',
             'is_task' => 'nullable|boolean',
             'type' => ['nullable', Rule::in(['fixed', 'hourly', 'presence', 'tax'])]]);
 
         $companySalary = CompanySalary::query()->create([
-            'user_id' => Auth::id(),
+//            'mst_user_id' => Auth::id(),
             'name' => $request->name,
             'salary' => $request->salary,
             'is_task' => $request->is_tax,
@@ -94,7 +102,7 @@ class EmployeePayrollTypeController extends Controller
     public function updatePayroll(Request $request)
     {
         $request->validate([
-            'id' => 'required|exists:company_salary,id',
+            'id' => 'required|exists:mst_company_salary,id',
             'name' => 'required|string',
             'salary' => 'required|numeric',
             'is_task' => 'nullable|boolean',
@@ -102,7 +110,7 @@ class EmployeePayrollTypeController extends Controller
         ]);
         $companySalary = CompanySalary::query()->findOrFail($request->id);
         $companySalary->update([
-            'user_id' => Auth::id(),
+//            'mst_user_id' => Auth::id(),
             'name' => $request->name,
             'salary' => $request->salary,
             'is_task' => $request->is_task,
@@ -128,20 +136,10 @@ class EmployeePayrollTypeController extends Controller
     #[Delete('/delete/json', '.json.delete')]
     public function deletePayroll(Request $request)
     {
-        $request->validate(['id' => 'required|numeric|exists:company_salary,id']);
+        $request->validate(['id' => 'required|numeric|exists:mst_company_salary,id']);
 
         CompanySalary::destroy($request->id);
 
         return new JsonBody(null, message: 'Company payroll deleted successfully');
     }
-
-
-    //user receipt user
-    #[Get('/{employee}/payroll', '.user.index')]
-    public function indexByUser(int $companyId, int $userId)
-    {
-        $user = User::query()->findOrFail($userId);
-        return Inertia::render('Employee/EmployeeSalary/EmployeePayrollReceipt',['user' => $user]);
-    }
-
 }

@@ -34,7 +34,7 @@ class PasswordController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email|exists:mst_users,email',
         ], ['email.exists' => 'Account with related email doesnt exist']);
 
         // We will send the password reset link to this user. Once we have attempted

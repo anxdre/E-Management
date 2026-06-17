@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shadcn/ui/table'
 import { Activity, ArrowUpRight, CircleUser, CreditCard, DollarSign, Menu, Package2, Search, Users } from 'lucide-vue-next'
 import { Avatar,AvatarImage,AvatarFallback } from "@/shadcn/ui/avatar";
+import axios from "axios";
 
+const employeeStatistics = defineProps(['employeeStatistics'])
 defineOptions({
     layout: LayoutWrapper
 })
@@ -269,78 +271,6 @@ defineOptions({
                     <CardTitle>Recent Presence</CardTitle>
                 </CardHeader>
                 <CardContent class="grid gap-8">
-                    <div class="flex items-center gap-4">
-                        <Avatar class="hidden h-9 w-9 sm:flex">
-                            <AvatarImage src="/avatars/01.png" alt="Avatar" />
-                            <AvatarFallback>OM</AvatarFallback>
-                        </Avatar>
-                        <div class="grid gap-1">
-                            <p class="text-sm font-medium leading-none">
-                                Olivia Martin
-                            </p>
-                            <p class="text-sm text-muted-foreground">
-                                Mulyorej Office
-                            </p>
-                        </div>
-                        <div class="ml-auto font-medium">
-                            08.30
-                        </div>
-                        <Badge class="text-xs bg-green-500">On Time</Badge>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <Avatar class="hidden h-9 w-9 sm:flex">
-                            <AvatarImage src="/avatars/02.png" alt="Avatar" />
-                            <AvatarFallback>JL</AvatarFallback>
-                        </Avatar>
-                        <div class="grid gap-1">
-                            <p class="text-sm font-medium leading-none">
-                                Jackson Lee
-                            </p>
-                            <p class="text-sm text-muted-foreground">
-                                Mulyorejo Office
-                            </p>
-                        </div>
-                        <div class="ml-auto font-medium">
-                            08.39
-                        </div>
-                        <Badge class="text-xs" variant="destructive">Late 9m</Badge>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <Avatar class="hidden h-9 w-9 sm:flex">
-                            <AvatarImage src="/avatars/02.png" alt="Avatar" />
-                            <AvatarFallback>JL</AvatarFallback>
-                        </Avatar>
-                        <div class="grid gap-1">
-                            <p class="text-sm font-medium leading-none">
-                                Jackson Lee
-                            </p>
-                            <p class="text-sm text-muted-foreground">
-                                Mulyorejo Office
-                            </p>
-                        </div>
-                        <div class="ml-auto font-medium">
-                            08.39
-                        </div>
-                        <Badge class="text-xs" variant="destructive">Late 9m</Badge>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <Avatar class="hidden h-9 w-9 sm:flex">
-                            <AvatarImage src="/avatars/02.png" alt="Avatar" />
-                            <AvatarFallback>JL</AvatarFallback>
-                        </Avatar>
-                        <div class="grid gap-1">
-                            <p class="text-sm font-medium leading-none">
-                                Jackson Lee
-                            </p>
-                            <p class="text-sm text-muted-foreground">
-                                Mulyorejo Office
-                            </p>
-                        </div>
-                        <div class="ml-auto font-medium">
-                            08.39
-                        </div>
-                        <Badge class="text-xs" variant="destructive">Late 9m</Badge>
-                    </div>
                     <div class="flex items-center gap-4">
                         <Avatar class="hidden h-9 w-9 sm:flex">
                             <AvatarImage src="/avatars/01.png" alt="Avatar" />

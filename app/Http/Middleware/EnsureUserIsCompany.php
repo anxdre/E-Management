@@ -16,7 +16,7 @@ class EnsureUserIsCompany
     public function handle(Request $request, Closure $next): Response
     {
         $user = auth()->user();
-        if (!$user || !$user->isCompany()) {
+        if (!$user || !$user->isSuper()) {
             abort(403, 'Only companies administrator are allowed to access this page.');
         }
 

@@ -9,21 +9,21 @@ use Illuminate\Database\Eloquent\Model;
 class PresenceEmployee extends Model
 {
     use HasFactory;
-    protected $table = 'presence_employees';
+    protected $table = 'trx_presence_employees';
     protected $guarded = ['id'];
 
     function presenceVerification()
     {
-        return $this->belongsTo(PresenceVerification::class, 'presence_verification_id','id');
+        return $this->belongsTo(PresenceVerification::class, 'trx_presence_verification_id','id');
     }
 
     function presenceLocation()
     {
-        return $this->belongsTo(PresenceLocation::class, 'presence_location_id','id');
+        return $this->belongsTo(PresenceLocation::class, 'mst_presence_location_id','id');
     }
 
     function user()
     {
-        return $this->belongsTo(User::class, 'user_id','id');
+        return $this->belongsTo(User::class, 'mst_user_id','id');
     }
 }

@@ -30,7 +30,7 @@ class EmployeeGroupController extends Controller
     public function getAllEmployeeGroup(request $request)
     {
         $data = CompanyGroup::query()
-            ->where('user_id', Auth::id())
+//            ->where('mst_user_id', Auth::id())
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%$request->search%");
             })
@@ -39,7 +39,7 @@ class EmployeeGroupController extends Controller
 
         array_map(function ($item) {
             $item['total_employee'] = GroupHasUser::query()
-                ->where('group_id', $item['id'])
+                ->where('mst_company_group_id', $item['id'])
                 ->count();
             return $item;
         }, $data->items());
@@ -53,7 +53,7 @@ class EmployeeGroupController extends Controller
 
         CompanyGroup::query()->create([
             'name' => $request->name,
-            'user_id' => Auth::id()
+            'mst_user_id' => Auth::id()
         ]);
 
         return new JsonBody(null, message: 'Group added successfully');
@@ -63,7 +63,7 @@ class EmployeeGroupController extends Controller
     public function updateGroup(Request $request)
     {
         $request->validate(['name' => 'required|string',
-            'id' => 'required|numeric|exists:company_groups,id']);
+            'id' => 'required|numeric|exists:mst_company_groups,id']);
 
         CompanyGroup::query()->find($request->get('id'))->update([
             'name' => $request->get('name')
@@ -75,7 +75,7 @@ class EmployeeGroupController extends Controller
     #[Delete('/delete/json', '.json.delete')]
     public function deleteGroup(Request $request)
     {
-        $request->validate(['data_id' => 'required|numeric|exists:company_groups,id']);
+        $request->validate(['data_id' => 'required|numeric|exists:mst_company_groups,id']);
 
         CompanyGroup::destroy($request->data_id);
 

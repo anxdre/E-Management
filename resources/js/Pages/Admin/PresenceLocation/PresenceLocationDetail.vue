@@ -31,7 +31,7 @@ defineOptions({
 const {dataFromServer} = defineProps<{ dataFromServer: any }>()
 
 const data = ref({
-    user_id: useAttrs().auth?.user?.id,
+    mst_user_id: useAttrs().auth?.user?.id,
     radius: 10,
     max_hour: 8,
     name:null,
@@ -39,7 +39,8 @@ const data = ref({
     longitude:null,
     min_hour:null,
     max_hour:null,
-    start_hour:null
+    start_hour:null,
+    end_hour:null
 })
 const markerPosition = computed({
     get(): LngLat {
@@ -96,7 +97,7 @@ tryOnBeforeMount(() => {
     if (dataFromServer) {
         data.value = {
             id: dataFromServer.id,
-            user_id: useAttrs().auth?.user?.id,
+            mst_user_id: useAttrs().auth?.user?.id,
             max_hour: dataFromServer.max_hour,
             min_hour: dataFromServer.min_hour,
             start_hour: dataFromServer.start_hour,
@@ -181,6 +182,10 @@ function _saveLocation() {
                                 <div>
                                     <Label>Presence Start</Label>
                                     <TimePicker v-model="data.start_hour" />
+                                </div>
+                                <div>
+                                    <Label>Presence End</Label>
+                                    <TimePicker v-model="data.end_hour" />
                                 </div>
                                 <div>
                                     <Label>Min Working Hour</Label>

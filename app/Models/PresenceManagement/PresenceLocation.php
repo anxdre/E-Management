@@ -9,26 +9,26 @@ use Illuminate\Database\Eloquent\Model;
 class PresenceLocation extends Model
 {
     use HasFactory;
-    protected $table = 'presence_locations';
+    protected $table = 'mst_presence_locations';
     protected $guarded = ['id'];
 
     function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+        return $this->belongsTo(User::class, 'mst_user_id', 'id');
     }
 
     function presenceEmployee()
     {
-        return $this->hasMany(PresenceEmployee::class, 'presence_location_id', 'id');
+        return $this->hasMany(PresenceEmployee::class, 'mst_presence_location_id', 'id');
     }
 
     function presenceVerification()
     {
-        return $this->hasMany(PresenceVerification::class, 'presence_location_id', 'id');
+        return $this->hasMany(PresenceVerification::class, 'mst_presence_location_id', 'id');
     }
     function singleVerification()
     {
-        return $this->hasMany(PresenceVerification::class, 'presence_location_id', 'id')->latest()
+        return $this->hasMany(PresenceVerification::class, 'mst_presence_location_id', 'id')->latest()
             ->limit(1);
     }
 }

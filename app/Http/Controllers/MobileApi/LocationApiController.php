@@ -21,17 +21,16 @@ class LocationApiController extends Controller
     public function getAllLocation(request $request)
     {
         $request->validate([
-            'company_id' => 'nullable|exists:users,id',
+            'company_id' => 'nullable|exists:mst_users,id',
         ]);
 
         $data = PresenceLocation::query()
-            ->where('user_id', $request->company_id)
+            ->where('mst_user_id', $request->company_id)
             ->with('singleVerification')
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%{$request->search}%");
             })
-            ->paginate(10)
-            ->withQueryString();
+            ->get();
 
         return new JsonBody($data);
     }

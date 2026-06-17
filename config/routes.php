@@ -14,7 +14,9 @@ use App\Http\Controllers\Payroll\CompanyPayrollReceiptController;
 use App\Http\Controllers\Payroll\EmployeePayrollTypeController;
 use App\Http\Controllers\Presence\EmployeePresenceController;
 use App\Http\Controllers\Presence\PresenceLocationController;
+use App\Http\Controllers\DeviceManagementController;
 use App\Http\Controllers\Presence\PresenceVerificationController;
+use App\Http\Controllers\MobileApi\ReceiptApiController;
 
 return [
 
@@ -73,6 +75,9 @@ return [
         PasswordController::class,
         DashboardController::class,
 
+        //employee device
+        DeviceManagementController::class,
+
         //employee
         EmployeeAccountController::class,
         EmployeeGroupController::class,
@@ -95,5 +100,6 @@ return [
         AuthApiController::class,
         PrensenceApiController::class,
         LocationApiController::class,
+        ReceiptApiController::class
     ],
 ];

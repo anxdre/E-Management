@@ -9,9 +9,16 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 class EmployeeSalary extends Pivot
 {
     use HasFactory;
+
+    protected $table = "pivot_employee_salary";
+
     protected $casts = [
         'available_to_request' => 'boolean',
         'included_at_default' => 'boolean',
     ];
-    protected $table = "employee_salary";
+
+    public function requestedSalaries()
+    {
+        return $this->hasMany(EmployeeRequestedSalary::class, 'pivot_employee_salary_id', 'id');
+    }
 }

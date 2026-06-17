@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Payroll;
 
+use App\Exports\PayrollReceiptExport;
+use App\Exports\ReceiptDetailExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JsonBody;
 use App\Models\Payroll\CompanySalary;
@@ -22,31 +24,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
-#[Prefix('Company/{user}/receipt'), Name('company-receipt'), Middleware(['only-company', 'scope-company'])]
+#[Prefix('receipt'), Name('company-receipt'), Middleware(['only-company'])]
 class CompanyPayrollReceiptController extends Controller
 {
     #[Get('/', '.index')]
-    public function index(User $company)
+    public function index(Request $request)
     {
         return Inertia::render('Admin/PayrollManagement/PayrollReceipt');
+    }
+
+    //user receipt user
+    #[Get('/{employee}/payroll', '.user.index')]
+    public function indexByUser(int $userId)
+    {
+        $user = User::query()->findOrFail($userId);
+        return Inertia::render('Employee/EmployeeSalary/EmployeePayrollReceipt', ['user' => $user]);
     }
 
     #[Get('/all/json', '.json.all',)]
     public function getAllPayroll(request $request)
     {
         $listOfEmployee = new Collection();
-        if ($request->filled('user')) {
-            $listOfEmployee->push(User::query()->where('id', $request->user)->firstOrFail());
+        if ($request->filled('employee_id')) {
+            $listOfEmployee->push(User::query()->where('id', $request->employee_id)->firstOrFail());
         }
 
-        if (!$request->filled('user')) {
-            $listOfEmployee = User::query()->where('company_id', Auth::id())->get();
+        if (!$request->filled('employee_id')) {
+            $listOfEmployee = User::query()->get();
         }
 
         $data = SalaryReceipt::query()
             ->with(['user', 'user.userDetail', 'user.groups', 'salaryReceiptItems'])
-            ->whereIn('user_id', $listOfEmployee->pluck('id'))
+            ->whereIn('mst_user_id', $listOfEmployee->pluck('id'))
             ->when($request->filled('search'), function ($query) use ($request) {
                 $query->whereHas('user', function ($q) use ($request) {
                     $q->where('email', 'like', "%{$request->search}%");
@@ -55,8 +66,8 @@ class CompanyPayrollReceiptController extends Controller
                 });
             })
             ->when($request->has('date_filter'), function ($query) use ($request) {
-                $startDate = $request->date_filter['start'];
-                $endDate = $request->date_filter['end'];
+                $startDate = Carbon::parse($request->date_filter['start']);
+                $endDate = Carbon::parse($request->date_filter['end']);
                 $query->whereBetween('start_date', [$startDate, $endDate]);
             })
             ->paginate(10)
@@ -69,8 +80,8 @@ class CompanyPayrollReceiptController extends Controller
     public function addBulkPayroll(Request $request)
     {
         $request->validate([
-            'user_id' => 'required',
-            'user_id.*' => 'required|exists:users,id',
+            'user_id' => 'required|array',
+            'user_id.*' => 'required|exists:mst_users,id',
             'date_start' => 'required',
             'date_end' => 'required',]);
 
@@ -87,9 +98,9 @@ class CompanyPayrollReceiptController extends Controller
             DB::beginTransaction();
             $calculatedData->each(function ($item) use ($request) {
                 $receipt = SalaryReceipt::query()->create([
-                    'user_id' => $item['user_id'],
-                    'start_date' => $request->date_start,
-                    'end_date' => $request->date_end,
+                    'mst_user_id' => $item['mst_user_id'],
+                    'start_date' => Carbon::parse($request->date_start),
+                    'end_date' => Carbon::parse($request->date_end),
                     'total_salary' => $item['total_salary'],
                     'salary_after_tax' => $item['salary_after_tax'],
                     'total_tax' => $item['total_tax'],
@@ -99,11 +110,17 @@ class CompanyPayrollReceiptController extends Controller
                 $item['salary_components'] = collect($item['salary_components']);
                 $item['salary_components']->each(function ($component) use ($receipt) {
                     SalaryReceiptItem::query()->create([
-                        'salary_receipt_id' => $receipt->id,
-                        'company_salary_id' => $component['id'],
+                        'trx_salary_receipt_id' => $receipt->id,
+                        'mst_company_salary_id' => $component['id'],
                         'quantity' => $component['quantity'],
                         'total_value' => $component['total_ammount'],
+                        'trx_employee_requested_salary_id' => $component['employee_requested_salary_id'] ?? null,
                     ]);
+
+                    if ($component['employee_requested_salary_id'] ?? null) {
+                        EmployeeRequestedSalary::where('id', $component['employee_requested_salary_id'])
+                            ->update(['is_realized' => true]);
+                    }
                 });
             });
             DB::commit();
@@ -112,78 +129,6 @@ class CompanyPayrollReceiptController extends Controller
             DB::rollBack();
             return new JsonBody(null, message: $exception->getMessage(), status_code: 500);
         }
-    }
-
-    #[Put('/update/json', '.json.update')]
-    public function updatePayroll(Request $request)
-    {
-        $request->validate([
-            'id' => 'required|exists:salary_receipt,id',
-            'company_salary_item' => 'required|array',
-            'company_salary_item.*.id' => 'required|exists:company_salary,id',
-            'start_date' => 'required',
-            'end_date' => 'required']);
-
-        $salaryReceipt = SalaryReceipt::query()->findOrFail($request->id);
-        $user = $salaryReceipt->user;
-        try {
-            DB::transaction(function () use ($request, $salaryReceipt, $user) {
-                // Calculate updated salary data
-                $calculatedData = $this->calculateEmployeeSalary($user, $request->start_date, $request->end_date,$request->company_salary_item);
-
-                // Update main receipt
-                $salaryReceipt->update([
-                    'work_hour' => $calculatedData['work_hours'],
-                    'start_date' => $request->start_date,
-                    'end_date' => $request->end_date,
-                    'total_salary' => $calculatedData['total_salary'],
-                    'salary_after_tax' => $calculatedData['salary_after_tax'],
-                    'total_tax' => $calculatedData['total_tax'],
-                    'total_presence_record' => $calculatedData['total_presence_record'],
-                ]);
-
-                // Delete existing receipt items
-                SalaryReceiptItem::where('salary_receipt_id', $salaryReceipt->id)->delete();
-
-                // Create new receipt items based on calculated components
-                collect($calculatedData['salary_components'])->each(function ($component) use ($salaryReceipt) {
-                    SalaryReceiptItem::create([
-                        'salary_receipt_id' => $salaryReceipt->id,
-                        'company_salary_id' => $component['id'],
-                        'quantity' => $component['quantity'],
-                        'total_value' => $component['total_ammount'],
-                    ]);
-                });
-            });
-        } catch (\Exception $exception) {
-            return new JsonBody(null, message: $exception->getMessage(), status_code: 500);
-        }
-        return new JsonBody(null, message: 'Company payroll updated successfully');
-    }
-
-    #[Delete('/delete/json', '.json.delete')]
-    public function deletePayroll(Request $request)
-    {
-        $request->validate(['id' => 'required|numeric|exists:salary_receipt,id']);
-
-        SalaryReceipt::destroy($request->id);
-
-        return new JsonBody(null, message: 'Company payroll deleted successfully');
-    }
-
-    #[Put('/confirm/json', '.json.confirm')]
-    public function confirmPayroll(Request $request)
-    {
-        $request->validate([
-            'id' => 'required|exists:salary_receipt,id',
-            'status' => ['required', 'boolean'],
-        ]);
-        $companySalary = SalaryReceipt::query()->findOrFail($request->id);
-        $companySalary->update([
-            'status' => $request->status ? 'approved' : 'denied',
-        ]);
-
-        return new JsonBody(null, message: 'Company payroll '. $request->status ? 'approved' : 'rejected'. ' successfully');
     }
 
     private function calculateEmployeeSalary(User $user, string $startDate, string $endDate, ?array $specificComponent = null): array
@@ -203,12 +148,11 @@ class CompanyPayrollReceiptController extends Controller
             ->get();
 
         $totalWorkHours = 0;
-        $specificAmmount = 0;
         foreach ($presenceRecords as $record) {
             // Calculate hours between check-in and check-out times
-            if ($record->check_in && $record->check_out) {
-                $checkIn = Carbon::parse($record->check_in);
-                $checkOut = Carbon::parse($record->check_out);
+            if ($record->time_in && $record->time_out) {
+                $checkIn = Carbon::parse($record->time_in);
+                $checkOut = Carbon::parse($record->time_out);
                 $hoursWorked = $checkOut->diffInHours($checkIn);
                 $totalWorkHours += $hoursWorked;
             }
@@ -218,19 +162,29 @@ class CompanyPayrollReceiptController extends Controller
             // 2. Get employee's default salary components (included by default)
             $defaultSalaryComponents = $user->defaultSalaries;
 
-            // 3. Get requested salary components that were accepted
+            // 3. Get requested salary components that were approved and not yet realized
             $requestedSalaryComponents = EmployeeRequestedSalary::query()
-                ->where('user_id', $user->id)
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('status', 'accepted')
+                ->with('employeeSalary')
+                ->whereHas('employeeSalary', function ($q) use ($user) {
+                    $q->where('mst_user_id', $user->id);
+                })
+                ->whereBetween('approved_date', [$startDate, $endDate])
+                ->where('status', 'approved')
+                ->where('is_realized', false)
                 ->get();
         }
 
         if ($specificComponent) {
-            $defaultSalaryComponents = CompanySalary::query()
-                ->whereIn('id', array_map(fn ($item) => $item['id'], $specificComponent))
-                ->get();
-
+            $defaultSalaryComponents = [];
+            foreach ($specificComponent as $component) {
+                $dataComponent = CompanySalary::query()
+                    ->find($component['id']);
+                if (!$dataComponent) {
+                    continue;
+                }
+                $dataComponent->quantity = $component['quantity'] ?? 1;
+                $defaultSalaryComponents[] = $dataComponent;
+            }
             $requestedSalaryComponents = [];
         }
 
@@ -242,7 +196,7 @@ class CompanyPayrollReceiptController extends Controller
 
         // Process default salary components
         foreach ($defaultSalaryComponents as $component) {
-            $calculatedComponent = $this->calculateComponentAmount($component, $totalWorkHours, $presenceRecords);
+            $calculatedComponent = $this->calculateComponentAmount($component, $totalWorkHours, $presenceRecords, $component->quantity);
 
             if ($component->is_tax) {
                 // Store tax components for later calculation
@@ -273,14 +227,10 @@ class CompanyPayrollReceiptController extends Controller
         }
 
         // Process requested salary components
-        foreach ($requestedSalaryComponents as $request) {
-            $component = CompanySalary::find($request->company_salary_id);
+        foreach ($requestedSalaryComponents as $requestedSalary) {
+            $component = CompanySalary::find($requestedSalary->employeeSalary->mst_company_salary_id);
             if ($component) {
-
-                if($specificAmmount){
-                    $calculatedComponent = $this->calculateComponentAmount($component, $specificAmmount, $presenceRecords);
-                }
-                $calculatedComponent = $this->calculateComponentAmount($component, $totalWorkHours, $presenceRecords);
+                $calculatedComponent = $this->calculateComponentAmount($component, $totalWorkHours, $presenceRecords, $requestedSalary->quantity);
 
                 if ($component->is_tax) {
                     // Store tax components for later calculation
@@ -289,7 +239,8 @@ class CompanyPayrollReceiptController extends Controller
                         'name' => $component->name,
                         'quantity' => $calculatedComponent->quantity,
                         'rate' => $calculatedComponent->totalSalary, // Tax rate in percentage
-                        'base_amount' => $calculatedComponent->salary
+                        'base_amount' => $calculatedComponent->salary,
+                        'trx_employee_requested_salary_id' => $requestedSalary->id,
                     ];
                 } else {
                     // Add or subtract based on calculation type
@@ -305,7 +256,8 @@ class CompanyPayrollReceiptController extends Controller
                         'type' => $component->type,
                         'quantity' => $calculatedComponent->quantity,
                         'total_ammount' => $calculatedComponent->totalSalary,
-                        'calculation_type' => $component->calculation_type
+                        'calculation_type' => $component->calculation_type,
+                        'trx_employee_requested_salary_id' => $requestedSalary->id,
                     ];
                 }
             }
@@ -331,7 +283,7 @@ class CompanyPayrollReceiptController extends Controller
         $salaryAfterTax = $totalSalary - $totalTax;
 
         return [
-            'user_id' => $user->id,
+            'mst_user_id' => $user->id,
             'work_hours' => $totalWorkHours,
             'salary_components' => $salaryComponents,
             'total_salary' => $totalSalary,
@@ -351,12 +303,12 @@ class CompanyPayrollReceiptController extends Controller
      * @param array $presenceRecords Optional presence records for presence-based calculation
      * @return CompanySalary
      */
-    private function calculateComponentAmount($component, $workHours, $presenceRecords = null)
+    private function calculateComponentAmount($component, $workHours, $presenceRecords = null, $specificAmmount = null)
     {
         switch ($component->type) {
             case 'fixed':
-                $component->quantity = 1;
-                $component->totalSalary = $component->salary;
+                $component->quantity = $specificAmmount ?? 1;
+                $component->totalSalary = $component->salary * $component->quantity;
                 return $component;
 
             case 'hourly':
@@ -369,7 +321,7 @@ class CompanyPayrollReceiptController extends Controller
                 if ($presenceRecords) {
                     $presenceCount = 0;
                     foreach ($presenceRecords as $record) {
-                        if ($record->check_in && $record->check_out) {
+                        if ($record->time_in && $record->time_out) {
                             $presenceCount++;
                         }
                     }
@@ -382,8 +334,8 @@ class CompanyPayrollReceiptController extends Controller
 
             case 'tax':
                 // For tax components, we return the base amount to be taxed
-                $component->quantity = 1;
-                $component->totalSalary = $component->salary;
+                $component->quantity = $specificAmmount ?? 1;
+                $component->totalSalary = $component->salary * $component->quantity;
                 return $component;
 
             default:
@@ -391,5 +343,104 @@ class CompanyPayrollReceiptController extends Controller
                 $component->totalSalary = 0;
                 return $component;
         }
+    }
+
+    #[Put('/update/json', '.json.update')]
+    public function updatePayroll(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:trx_salary_receipt,id',
+            'company_salary_item' => 'required|array',
+            'company_salary_item.*.id' => 'required|exists:mst_company_salary,id',
+            'start_date' => 'required',
+            'end_date' => 'required']);
+
+        $salaryReceipt = SalaryReceipt::query()->findOrFail($request->id);
+        $user = $salaryReceipt->user;
+        try {
+            DB::transaction(function () use ($request, $salaryReceipt, $user) {
+                // Calculate updated salary data
+                $calculatedData = $this->calculateEmployeeSalary($user, $request->start_date, $request->end_date, $request->company_salary_item);
+                // Update main receipt
+                $salaryReceipt->update([
+                    'work_hour' => $calculatedData['work_hours'],
+                    'start_date' => Carbon::parse($request->start_date),
+                    'end_date' => Carbon::parse($request->end_date),
+                    'total_salary' => $calculatedData['total_salary'],
+                    'salary_after_tax' => $calculatedData['salary_after_tax'],
+                    'total_tax' => $calculatedData['total_tax'],
+                    'total_presence_record' => $calculatedData['total_presence_record'],
+                ]);
+
+                // Delete existing receipt items
+                SalaryReceiptItem::where('trx_salary_receipt_id', $salaryReceipt->id)->delete();
+
+                // Create new receipt items based on calculated components
+                collect($calculatedData['salary_components'])->each(function ($component) use ($salaryReceipt) {
+                    SalaryReceiptItem::create([
+                        'trx_salary_receipt_id' => $salaryReceipt->id,
+                        'mst_company_salary_id' => $component['id'],
+                        'quantity' => $component['quantity'],
+                        'total_value' => $component['total_ammount'],
+                        'trx_employee_requested_salary_id' => $component['employee_requested_salary_id'] ?? null,
+                    ]);
+
+                    if ($component['employee_requested_salary_id'] ?? null) {
+                        EmployeeRequestedSalary::where('id', $component['employee_requested_salary_id'])
+                            ->update(['is_realized' => true]);
+                    }
+                });
+            });
+        } catch (\Exception $exception) {
+            return new JsonBody(null, message: $exception->getMessage(), status_code: 500);
+        }
+        return new JsonBody(null, message: 'Company payroll updated successfully');
+    }
+
+    #[Delete('/delete/json', '.json.delete')]
+    public function deletePayroll(Request $request)
+    {
+        $request->validate(['id' => 'required|numeric|exists:trx_salary_receipt,id']);
+
+        SalaryReceipt::destroy($request->id);
+
+        return new JsonBody(null, message: 'Company payroll deleted successfully');
+    }
+
+    #[Put('/confirm/json', '.json.confirm')]
+    public function confirmPayroll(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:trx_salary_receipt,id',
+            'status' => ['required', 'boolean'],
+        ]);
+        $companySalary = SalaryReceipt::query()->findOrFail($request->id);
+        $companySalary->update([
+            'status' => $request->status ? 'approved' : 'denied',
+        ]);
+
+        return new JsonBody(null, message: 'Company payroll ' . ($request->status ? 'approved' : 'rejected') . ' successfully');
+    }
+
+    #[Get('/export/excel', '.export.excel')]
+    public function exportExcel(Request $request)
+    {
+        $filters = [
+            'employee_id' => $request->employee_id,
+            'search' => $request->search,
+            'date_start' => $request->date_start,
+            'date_end' => $request->date_end,
+            'status' => $request->status,
+        ];
+
+        $fileName = 'payroll-receipts-' . now()->format('Ymd-His') . '.xlsx';
+        return Excel::download(new PayrollReceiptExport($filters), $fileName);
+    }
+
+    #[Get('/{payroll}/export/detail-excel', '.export.detail.excel')]
+    public function exportDetailExcel(int $payroll)
+    {
+        $fileName = 'payroll-receipt-detail-' . $payroll . '-' . now()->format('Ymd-His') . '.xlsx';
+        return Excel::download(new ReceiptDetailExport($payroll), $fileName);
     }
 }

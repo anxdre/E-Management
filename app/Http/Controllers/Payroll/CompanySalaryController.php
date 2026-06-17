@@ -32,7 +32,7 @@ class CompanySalaryController extends Controller
     public function getAllPayroll(request $request)
     {
         $data = CompanySalary::query()
-            ->where('user_id', Auth::id())
+//            ->where('user_id', Auth::id())
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%$request->search%");
             })
@@ -59,7 +59,7 @@ class CompanySalaryController extends Controller
         try {
             DB::transaction(function () use ($request) {
                 $companySalary = CompanySalary::query()->create([
-                    'user_id' => Auth::id(),
+//                    'user_id' => Auth::id(),
                     'name' => $request->name,
                     'salary' => $request->salary,
                     'is_tax' => $request->is_tax,
@@ -89,7 +89,7 @@ class CompanySalaryController extends Controller
     public function updatePayroll(Request $request)
     {
         $request->validate([
-            'id' => 'required|exists:company_salary,id',
+            'id' => 'required|exists:mst_company_salary,id',
             'name' => 'required|string',
             'salary' => 'required|numeric',
             'is_tax' => 'nullable|boolean',
@@ -99,7 +99,7 @@ class CompanySalaryController extends Controller
         try {
             DB::transaction(function () use ($request,$companySalary) {
                 $companySalary->update([
-                    'user_id' => Auth::id(),
+//                    'user_id' => Auth::id(),
                     'name' => $request->name,
                     'salary' => $request->salary,
                     'is_tax' => $request->is_tax,
@@ -128,7 +128,7 @@ class CompanySalaryController extends Controller
     #[Delete('/delete/json', '.json.delete')]
     public function deletePayroll(Request $request)
     {
-        $request->validate(['id' => 'required|numeric|exists:company_salary,id']);
+        $request->validate(['id' => 'required|numeric|exists:mst_company_salary,id']);
 
         CompanySalary::destroy($request->id);
 

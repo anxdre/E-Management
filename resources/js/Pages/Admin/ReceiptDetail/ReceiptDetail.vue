@@ -7,7 +7,7 @@ import axios from "axios";
 import { cn, errorToast, hideGlobalLoader, showGlobalLoader, successToast } from "@/lib/utils";
 import LayoutWrapper from "@/Layouts/LayoutWrapper.vue";
 import { Separator } from "@/shadcn/ui/separator";
-import { Check, ChevronsUpDown, LoaderIcon, TrashIcon, TriangleAlert, CalendarIcon } from "lucide-vue-next";
+import { Check, ChevronsUpDown, DownloadIcon, LoaderIcon, TrashIcon, TriangleAlert, CalendarIcon } from "lucide-vue-next";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shadcn/ui/table";
 import { Button } from "@/shadcn/ui/button";
 import { jsPDF } from "jspdf"
@@ -122,7 +122,12 @@ function addPayrollItem() {
        is_tax : undefined,
        type :undefined,
        calculation_type : undefined,
-       salary : undefined
+       quantity: undefined,
+       salary : undefined,
+       detail_item: {
+           quantity:  0,
+           total_value:  0
+       },
    })
 }
 
@@ -143,9 +148,9 @@ function updatePayroll() {
                 errorToast('Error !', message)
                 return
             }
-            data.value = dataFromServer
             successToast('Success !', message)
             isEdit.value = false
+            getData()
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)
@@ -153,6 +158,11 @@ function updatePayroll() {
         .finally(() => {
             hideGlobalLoader()
         })
+}
+
+function exportDetailExcel() {
+    const url = route('company-receipt.export.detail.excel', { user: attrs.auth.user?.id, payroll: data.value.id })
+    window.open(url, '_blank')
 }
 
 function confirmPayroll(status:boolean) {
@@ -343,7 +353,7 @@ onMounted(() => {
                                     <TableHead class="text-center">Base Ammount</TableHead>
                                     <TableHead class="text-center">Category</TableHead>
                                     <TableHead class="text-center">Type</TableHead>
-                                    <TableHead v-if="!isEdit" class="text-center">Quantity</TableHead>
+                                    <TableHead class="text-center">Quantity</TableHead>
                                     <TableHead v-if="!isEdit" class="text-center">Total Earning</TableHead>
                                     <TableHead v-if="isEdit" class="text-center">Action</TableHead>
                                 </TableRow>
@@ -432,7 +442,11 @@ onMounted(() => {
                                     <TableCell v-if="!isEdit" class="text-center">
                                         {{ data.detail_item.quantity }}
                                     </TableCell>
-                                    <TableCell v-if="!isEdit && !data.is_tax" class="text-right">
+                                     <TableCell v-else class="text-center">
+                                        <Input type="number" min="0" v-if="data.type == 'fixed'" :default-value="data.detail_item.quantity"  v-model="data.quantity"/>
+                                        <Label v-else>-</Label>
+                                    </TableCell>
+                                    <TableCell v-if="!isEdit && !data.is_tax && data.calculation_type == 'add' " class="text-right">
                                         {{
                                             data.detail_item.total_value ? new Intl.NumberFormat('id-ID', {
                                                 style: 'currency',
@@ -440,7 +454,7 @@ onMounted(() => {
                                             }).format(data.detail_item.total_value) : '-'
                                         }}
                                     </TableCell>
-                                    <TableCell v-if="!isEdit && data.is_tax" class="text-right text-red-500">
+                                    <TableCell v-if="!isEdit && (data.is_tax || data.calculation_type == 'subtract')" class="text-right text-red-500">
                                         - {{
                                             data.detail_item.total_value ? new Intl.NumberFormat('id-ID', {
                                                 style: 'currency',
@@ -490,6 +504,15 @@ onMounted(() => {
                                     }}</span>
                             </div>
                             <div class="md:flex grid justify-between items-center">
+                                <span class="text-sm font-medium">Total Subtraction</span>
+                                <span v-if="!isEdit" class="text-red-500"> - {{
+                                        data.total_subtract ? new Intl.NumberFormat('id-ID', {
+                                            style: 'currency',
+                                            currency: 'IDR'
+                                        }).format(data.total_subtract) : '-'
+                                    }}</span>
+                            </div>
+                            <div class="md:flex grid justify-between items-center">
                                 <span class="text-sm font-medium">Total Tax</span>
                                 <span v-if="!isEdit" class="text-red-500"> - {{
                                         data.total_tax ? new Intl.NumberFormat('id-ID', {
@@ -530,13 +553,14 @@ onMounted(() => {
         <div class="container mx-auto w-full max-w-3xl p-4">
             <div class="inline-flex w-full items-center justify-between gap-2">
                 <div class="space-x-2">
-                    <Button :disabled="isEdit" @click="downloadPDF()" variant="outline">Export / Print</Button>
-                    <Button @click="updatePayroll()" class="bg-amber-500">{{
+                    <Button :disabled="isEdit" @click="downloadPDF()" variant="outline">Export PDF</Button>
+                    <Button :disabled="isEdit" @click="exportDetailExcel()" variant="outline">Export Excel</Button>
+                    <Button  v-if="data.status == 'pending'" @click="updatePayroll()" class="bg-amber-500">{{
                             isEdit ? 'Save Receipt' : 'Edit Receipt'
                         }}
                     </Button>
                 </div>
-                <div class="space-x-2">
+                <div class="space-x-2" v-if="data.status == 'pending'">
                     <Button @click="confirmPayroll(false)" :disabled="isEdit" class="bg-black">Reject</Button>
                     <Button @click="confirmPayroll(true)" :disabled="isEdit">Approve</Button>
                 </div>

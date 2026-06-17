@@ -159,7 +159,10 @@ onMounted(() => {
                     <div v-if="!isCreate && !isEditing" class="ml-auto flex items-center gap-2">
                         <Button @click="isEditing = true" size="sm" class="h-7 gap-1 bg-black">
                             <PencilIcon class="h-3.5 w-3.5"/>
-                            <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                            <span v-if="props.account?.type == 'superadmin'" class="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Edit Company Profile
+                </span>
+                            <span v-else class="sr-only sm:not-sr-only sm:whitespace-nowrap">
                   Edit Employee Account
                 </span>
                         </Button>
@@ -176,23 +179,25 @@ onMounted(() => {
                                             :class="isEditing || isCreate ? cn('cursor-pointer') : '' ">
                                         <AvatarImage :src="profileImage ?? ''"></AvatarImage>
                                         <AvatarImage :src="profileImage ?? ''"></AvatarImage>
-                                        <AvatarFallback>Profile Picture</AvatarFallback>
+                                        <AvatarFallback  v-if="props.account?.type == 'superadmin'">Company Logo</AvatarFallback>
+                                        <AvatarFallback v-else>Profile Picture</AvatarFallback>
                                     </Avatar>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <span>Change profile picture</span>
+                                    <span v-if="props.account?.type == 'superadmin'">Change Company Logo</span>
+                                    <span v-else>Change profile picture</span>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
-                        <span v-if="!isCreate && !isEditing" class="text-xs text-muted-foreground">*you must enter edit mode to change profile picture</span>
+                        <span v-if="!isCreate && !isEditing" class="text-xs text-muted-foreground">*you must enter edit mode to change picture</span>
                         <span v-else
                               class="text-xs text-muted-foreground">*don't forget to save before leaving the page</span>
-                        <div v-if="!isCreate && !isEditing " class="w-full flex flex-col items-center space-y-2">
-                            <Button @click="navigateLink(route('employee-payroll.user.index',{user:$page.props.auth.user.id,employee:props.account.id}))" class="w-full gap-4">
+                        <div v-if="!isCreate && !isEditing && props.account?.type != 'superadmin'" class="w-full flex flex-col items-center space-y-2">
+                            <Button @click="navigateLink(route('company-receipt.user.index',{user:$page.props.auth.user.id,employee:props.account?.id}))" class="w-full gap-4">
                                 <NotepadText/>
                                 Manage Employee Salary
                             </Button>
-                            <Button @click="router.get(route('employee-presence.index',{user:props.account.id}))"
+                            <Button @click="router.get(route('employee-presence.index',{user:props.account?.id}))"
                                     class="w-full gap-4">
                                 <MapPinCheck/>
                                 Manage Employee Presence
@@ -203,7 +208,8 @@ onMounted(() => {
                         <form class="space-y-4" @submit="onSubmit">
                             <FormField name="name" :validate-on-blur="!isFieldDirty" v-slot="{ componentField }">
                                 <FormItem v-auto-animate>
-                                    <FormLabel>Full Name</FormLabel>
+                                    <FormLabel v-if="props.account?.type == 'superadmin'">Company Name</FormLabel>
+                                    <FormLabel v-else>Full Name</FormLabel>
                                     <FormControl>
                                         <Input :disabled="!isCreate && !isEditing"
                                                v-bind="componentField"
@@ -264,7 +270,7 @@ onMounted(() => {
                                 </FormItem>
                             </FormField>
 
-                            <FormField name="is_suspended" :validate-on-blur="!isFieldDirty"
+                            <FormField v-if="props.account?.type != 'superadmin'" name="is_suspended" :validate-on-blur="!isFieldDirty"
                                        v-slot="{ componentField }">
                                 <FormItem v-auto-animate>
                                     <FormLabel>Status</FormLabel>
@@ -314,7 +320,7 @@ onMounted(() => {
                                 </FormItem>
                             </FormField>
 
-                            <FormField name="company_group" :validate-on-blur="!isFieldDirty"
+                            <FormField v-if="props.account?.id != 1" name="company_group" :validate-on-blur="!isFieldDirty"
                                        v-slot="{ componentField }">
                                 <FormItem v-auto-animate>
                                     <FormLabel>Company Group</FormLabel>

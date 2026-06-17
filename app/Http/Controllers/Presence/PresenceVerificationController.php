@@ -18,7 +18,7 @@ class PresenceVerificationController extends Controller
     #[Post('/', '.verify')]
     public function index(Request $request)
     {
-        $request->validate(['id' => 'required|exists:presence_locations,id',
+        $request->validate(['id' => 'required|exists:mst_presence_locations,id',
             'code'=>'required|number',
             'latitude'=>'required|numeric',
             'longitude'=>'required|numeric',
@@ -29,7 +29,7 @@ class PresenceVerificationController extends Controller
     #[Post('/New', '.json.new')]
     public function generateNew(Request $request)
     {
-        $request->validate(['id' => 'required|exists:presence_locations,id']);
+        $request->validate(['id' => 'required|exists:mst_presence_locations,id']);
         $date = CarbonImmutable::now('Asia/Jakarta')->format('d');
         $second = CarbonImmutable::now('Asia/Jakarta')->format('s');
         $randPrefix = rand(10, 99);

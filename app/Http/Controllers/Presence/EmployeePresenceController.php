@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Presence;
 
 use App\DateHelper;
+use App\Exports\PresenceHistoryExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JsonBody;
 use App\Models\PresenceManagement\PresenceEmployee;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 #[Prefix('Employee'), Name('employee-presence'), Middleware('auth')]
 class EmployeePresenceController extends Controller
@@ -37,35 +39,35 @@ class EmployeePresenceController extends Controller
     #[Get('/{user}/json', '.json.all', ['scope-company'])]
     public function getAllHistory(request $request, User $user)
     {
-        $request->validate(['presence_location_id' => 'nullable|exists:presence_locations,id',
+        $request->validate(['mst_presence_location_id' => 'nullable|exists:mst_presence_locations,id',
             'time.*' => 'nullable|string',]);
 
         $data = PresenceEmployee::query()
-            ->where('user_id', $user->id)
+            ->where('mst_user_id', $user->id)
             ->when(!empty($request->status), function ($query) use ($request) {
-                return $query->where('status_by_admin',  $request->get('status'));
+                return $query->where('status_by_admin', $request->get('status'));
             })
             ->when(!empty($request->location_id), function ($query) use ($request) {
-                return $query->where('presence_location_id', $request->get('location_id'));
+                return $query->where('mst_presence_location_id', $request->get('location_id'));
             })
-            ->orderBy('time_in',$request->orderBy ?? 'desc')
-            ->paginate(10,page: $request->currentPage ?? 1)
+            ->orderBy('time_in', $request->orderBy ?? 'desc')
+            ->paginate(10, page: $request->currentPage ?? 1)
             ->withQueryString();
 
         return new JsonBody($data);
     }
 
-    #[Delete('/{user}/delete/json', '.json.delete', ['scope-company','only-company'])]
+    #[Delete('/{user}/delete/json', '.json.delete', ['scope-company', 'only-company'])]
     public function deleteData(request $request, User $user)
     {
-        $request->validate(['id' => 'required|numeric|exists:presence_employees,id']);
+        $request->validate(['id' => 'required|numeric|exists:trx_presence_employees,id']);
 
-        try{
+        try {
             PresenceEmployee::query()->find($request->id)->delete();
-        }catch (\Exception $exception){
-            return new JsonBody(null,message: 'Delete failed caused by '. $exception->getMessage());
+        } catch (\Exception $exception) {
+            return new JsonBody(null, message: 'Delete failed caused by ' . $exception->getMessage());
         }
-        return new JsonBody(null,message: 'Presence successfuly deleted');
+        return new JsonBody(null, message: 'Presence successfuly deleted');
     }
 
     #[Post('{user}/create/json', '.json.create', ['scope-company'])]
@@ -75,7 +77,7 @@ class EmployeePresenceController extends Controller
             'code' => 'nullable|numeric',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'location_id' => 'required|exists:presence_locations,id',
+            'location_id' => 'required|exists:mst_presence_locations,id',
             'note' => 'nullable',
             'time' => 'nullable',
             'status' => ['required', Rule::in(['in', 'out'])],
@@ -83,10 +85,10 @@ class EmployeePresenceController extends Controller
 
         $verificationCode = PresenceVerification::query()
             ->select(['verification_hash', 'id'])
-            ->where('presence_location_id', $request->get('location_id'))
+            ->where('mst_presence_location_id', $request->get('location_id'))
             ->first();
 
-        if ($verificationCode == null) {
+        if ($verificationCode == null && Auth::user()->isEmployee()) {
             return new JsonBody([], 'Verification code not been setup, Contact your administrator', 404);
         }
 
@@ -95,76 +97,16 @@ class EmployeePresenceController extends Controller
         }
 
         $presenceLocation = PresenceLocation::query()->find($request->get('location_id'));
-        $historyAttendance = PresenceEmployee::query()
-            ->where('user_id', $user->id)
-            ->where('presence_location_id', $presenceLocation->id)
-            ->latest('time')
-            ->first();
 
         $employeePresence = new PresenceEmployee([
-            'user_id' => $user->id,
-            'presence_location_id' => $request->get('location_id'),
+            'mst_user_id' => $user->id,
+            'mst_presence_location_id' => $request->get('location_id'),
             'latitude' => $request->get('latitude'),
             'longitude' => $request->get('longitude'),
             'note' => $request->get('note'),
             'status_by_admin' => Auth::user()->type == 'company' ? 'approved' : 'pending',
         ]);
 
-        if ($request->status == 'in' && Auth::user()->isEmployee()) {
-            if ($presenceLocation->start_hour) {
-                $startTimeToday = Carbon::createFromFormat('H:i:s', $presenceLocation->start_hour)
-                    ->setDateFrom(Carbon::now());
-                if (Carbon::now()->lt($startTimeToday)) {
-                    return new JsonBody([], 'Belum waktunya absen masuk, tunggu sampai jam ' . $startTimeToday->format('H:i:s'), 422);
-                }
-            }
-            if ($historyAttendance && $historyAttendance->time_in || $historyAttendance->presence_location_id != $presenceLocation->id) {
-                return new JsonBody([], 'Mohon check-out di lokasi anda check-in terlebih dahulu', 403);
-            }
-            $employeePresence->time_in = Carbon::now();
-        }
-
-        if ($request->status == 'out' && Auth::user()->isEmployee()) {
-            if ($historyAttendance && $historyAttendance->time_out || $historyAttendance->presence_location_id != $presenceLocation->id) {
-                return new JsonBody([], 'Data check-in tidak terdeteksi', 403);
-            }
-
-            $isLimit = false;
-            $isEarlier = false;
-            if ($presenceLocation->max_hour) {
-                $isLimit = Carbon::parse($employeePresence->time)->diffInHours($historyAttendance->time, true) > $presenceLocation->max_hour;
-            }
-
-            if ($presenceLocation->min_hour) {
-                $isEarlier = Carbon::parse($employeePresence->time)->diffInHours($historyAttendance->time) < $presenceLocation->min_hour;
-            }
-
-            if ($isLimit) {
-                $employeePresence->extended_time = $this->diffTimeFormatted($presenceLocation->max_hour, $historyAttendance->time);
-                $employeePresence->note = "*late check out !, need admin verification \n\n $employeePresence->note";
-                $employeePresence->status_by_admin = 'pending';
-            }
-
-            if ($isEarlier) {
-                $employeePresence->extended_time = $this->diffTimeMinusFormatted($presenceLocation->max_hour, $historyAttendance->time);
-                $employeePresence->note = "*Earlier check out !, need admin verification \n\n $employeePresence->note";
-                $employeePresence->status_by_admin = 'pending';
-            }
-        }
-
-        if (Auth::user()->isEmployee()) {
-            $distance = $this->haversineDistance(
-                $request->get('latitude'),
-                $request->get('longitude'),
-                $presenceLocation->latitude,
-                $presenceLocation->longitude
-            );
-
-            if ($distance > $presenceLocation->tolerance) {
-                $employeePresence->note = "*Position Out Of Radius !, need admin verification \n\n $employeePresence->note";
-                $employeePresence->status_by_admin = Auth::user()->isCompany ? 'approved' : 'pending';
-            }
-        }
 
         if ($request->hasFile('attachment')) {
             $attachment = $request->file('attachment');
@@ -172,41 +114,55 @@ class EmployeePresenceController extends Controller
             $filename = "$timestamp." . $attachment->getClientOriginalExtension();
 
             // Simpan ke public storage path
-            $path = "attendance/attachment/{$request->get('user_id')}";
+            $path = "attendance/attachment/{$user->id}";
             Storage::putFileAs("public/$path", $attachment, $filename);
 
             // Simpan path ke DB (tanpa "public/")
             $employeePresence->attachment = "$path/$filename";
         }
 
-        if (Auth::user()->isCompany()) {
-            $employeePresence->time_in = $request->time_in;
-            $employeePresence->time_out = $request->time_out;
-            $employeePresence->presence_verification_id = $verificationCode->id;
+        $employeePresence->time_in = Carbon::parse($request->time_in)->timezone('Asia/Jakarta');
+        $employeePresence->time_out = Carbon::parse($request->time_out)->timezone('Asia/Jakarta');
+//        $employeePresence->presence_verification_id = $verificationCode->id;
 
 
-            $isLimit = false;
-            $isEarlier = false;
-            if ($presenceLocation->max_hour) {
-                $isLimit = Carbon::parse($employeePresence->time_out)->diffInHours(Carbon::parse($employeePresence->time_out), true) > $presenceLocation->max_hour;
-            }
-
-            if ($presenceLocation->min_hour) {
-                $isEarlier = Carbon::parse($employeePresence->time_out)->diffInHours(Carbon::parse($employeePresence->time_out)) < $presenceLocation->min_hour;
-            }
-
-            if ($isLimit) {
-                $employeePresence->extended_time = $this->diffTimeFormatted(Carbon::parse($presenceLocation->max_hour), Carbon::parse($employeePresence->time_out));
-            }
-
-            if ($isEarlier) {
-                $employeePresence->extended_time = $this->diffTimeMinusFormatted(Carbon::parse($presenceLocation->max_hour), Carbon::parse($employeePresence->time_out));
-            }
+        $isLimit = false;
+        $isEarlier = false;
+        if ($presenceLocation->max_hour) {
+            $isLimit = Carbon::parse($employeePresence->time_out)->diffInHours(Carbon::parse($employeePresence->time_out), true) > $presenceLocation->max_hour;
         }
+
+        if ($presenceLocation->min_hour) {
+            $isEarlier = Carbon::parse($employeePresence->time_out)->diffInHours(Carbon::parse($employeePresence->time_out)) < $presenceLocation->min_hour;
+        }
+
+        if ($isLimit) {
+            $employeePresence->extended_time = Carbon::parse($this->diffTimeFormatted(Carbon::parse($presenceLocation->max_hour), Carbon::parse($employeePresence->time_out)));
+        }
+
+        if ($isEarlier) {
+            $employeePresence->extended_time = Carbon::parse($this->diffTimeMinusFormatted(Carbon::parse($presenceLocation->max_hour), Carbon::parse($employeePresence->time_out)));
+        }
+
         if (!$employeePresence->save()) {
             return new JsonBody([], 'Something went error on server, call administrator or HRD', 500);
         }
 
         return new JsonBody($employeePresence, 'Success');
+    }
+
+    #[Get('/{user}/export/excel', '.export.excel', ['scope-company'])]
+    public function exportExcel(Request $request, User $user)
+    {
+        $filters = [
+            'status' => $request->status,
+            'location_id' => $request->location_id,
+            'date_start' => $request->date_start,
+            'date_end' => $request->date_end,
+            'order_by' => $request->orderBy ?? 'desc',
+        ];
+
+        $fileName = 'presence-history-' . $user->id . '-' . now()->format('Ymd-His') . '.xlsx';
+        return Excel::download(new PresenceHistoryExport($user->id, $filters), $fileName);
     }
 }

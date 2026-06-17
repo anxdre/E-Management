@@ -5,6 +5,7 @@ import {
     ArrowRightCircle,
     CalendarIcon,
     CircleX,
+    DownloadIcon,
     LoaderCircleIcon,
     MoreHorizontal,
     PlusCircle,
@@ -133,7 +134,8 @@ function getDataset(page?: number) {
     isLoading.value = true
     axios.get(route('company-receipt.json.all', {
         page: page,
-        user: props.user.id,
+        user: attrs.auth.user.id,
+        employee_id: props.user.id,
         search: paginateControl.searchQuery,
         date_filter: {
             start: dateFilter.value.start?.toDate('Asia/Jakarta'),
@@ -255,6 +257,17 @@ function deleteAssignedEmployee(index) {
     generateForm.value.assigned_to.splice(index, 1)
 }
 
+function exportExcel() {
+    const params = {
+        search: paginateControl.searchQuery,
+        employee_id: props.user.id,
+        date_start: dateFilter.value.start?.toDate('Asia/Jakarta'),
+        date_end: dateFilter.value.end?.toDate('Asia/Jakarta'),
+    }
+    const url = route('company-receipt.export.excel', { ...params, user: attrs.auth.user.id })
+    window.open(url, '_blank')
+}
+
 function addData() {
     companySalaryForm.value = {
         id: undefined,
@@ -268,14 +281,15 @@ function addData() {
         companyGroupId: undefined,
         assigned_to: [],
     }
-    generateForm.value.assigned_to = []
     generateForm.value.calculateDate = { start, end }
     dialogState.add.state = true
 }
 
 tryOnMounted(async () => {
-    getAllGroupCompany('')
-    getDataset()
+    generateForm.value.assigned_to.push(props.user)
+    await getAllGroupCompany('')
+    await getDataset()
+
 })
 </script>
 
@@ -287,7 +301,7 @@ tryOnMounted(async () => {
                 <DialogHeader class="p-6 pb-0">
                     <DialogTitle>Generate New Employee Payroll</DialogTitle>
                     <DialogDescription>
-                        Create bulk employee payroll here. Click save when you're done.
+                        Create automatic calculation employee payroll here (you can edit it later). Click save when you're done.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="grid gap-4 py-4 overflow-y-auto px-6">
@@ -317,28 +331,13 @@ tryOnMounted(async () => {
                                 <Separator/>
                             </div>
                             <div class="w-full h-full flex flex-col gap-2">
-                                <Label class="ps-2">Assign employee by group</Label>
-                                <Label class="ps-2 text-xs text-muted-foreground">Tips : You can generate customized
-                                    salary each employee
-                                    at <strong>Employee Management</strong></Label>
-                                <Select v-model="companySalaryForm.companyGroupId"
-                                        @update:modelValue="getEmployeeByGroup()">
-                                    <SelectTrigger class="capitalize">Select Company Group</SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            <SelectItem v-for="group in companyGroup" :value="group.id">
-                                                {{ group.name }}
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
+                                <Label class="ps-2">Assigned employee</Label>
+                                <Label class="ps-2 text-xs text-muted-foreground">Tips : You can generate bulk
+                                    salary employee by group
+                                    at <strong>Management > Employee Salary</strong></Label>
                                 <ul>
                                     <li v-for="(user,index) in generateForm.assigned_to">
                                         <Card class="w-full p-4">
-                                            <Button @click="deleteAssignedEmployee(index)"
-                                                    class="float-right w-fit rounded-full h-fit p-0 bg-black">
-                                                <CircleX/>
-                                            </Button>
                                             <div class="flex flex-col justify-between">
                                                 <Label class="text-lg font-bold">
                                                     {{ user.user_detail?.fullname }}
@@ -538,6 +537,10 @@ tryOnMounted(async () => {
                 <CardDescription class="inline-flex justify-between items-center">
                     Manage your company payroll receipt and manage employee payroll related settings.
                     <div class="ml-auto flex items-center gap-2">
+                        <Button @click="exportExcel()" size="sm" class="h-7 gap-1" variant="outline">
+                            <DownloadIcon class="h-3.5 w-3.5"/>
+                            <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">Export Excel</span>
+                        </Button>
                         <Button @click="addData()" size="sm" class="h-7 gap-1 bg-black">
                             <PlusCircle class="h-3.5 w-3.5"/>
                             <span class="sr-only sm:not-sr-only sm:whitespace-nowrap">Generate Payroll</span>
@@ -577,6 +580,7 @@ tryOnMounted(async () => {
                             </TableHead>
                             <TableHead>Employee Name</TableHead>
                             <TableHead class="text-center">Total Value</TableHead>
+                            <TableHead class="text-center">Total Value After Tax & Deduction</TableHead>
                             <TableHead class="text-center">Status</TableHead>
                             <TableHead class="text-center">Transaction Date</TableHead>
                             <TableHead class="text-center">Requested At</TableHead>
@@ -601,6 +605,14 @@ tryOnMounted(async () => {
                                     }).format(data.total_salary) : '-'
                                 }}
                             </TableCell>
+                            <TableCell class="font-medium text-center">
+                                {{
+                                    data.total_salary ? new Intl.NumberFormat('id-ID', {
+                                        style: 'currency',
+                                        currency: 'IDR'
+                                    }).format(data.salary_after_tax) : '-'
+                                }}
+                            </TableCell>
                             <TableCell class="text-center">
                                 <Badge
                                     :variant="data.status == 'approved' ? 'success' : data.status == 'denied' ? 'destructive' : 'warning'">
@@ -608,7 +620,7 @@ tryOnMounted(async () => {
                                 </Badge>
                             </TableCell>
                             <TableCell class="text-center">
-                                {{ dayjs(data.date).format('DD/MM/YYYY') }}
+                                {{ dayjs(data.start_date).format('DD/MM/YYYY') }}
                             </TableCell>
                             <TableCell class="text-center">
                                 {{ dayjs(data.created_at).format('DD/MM/YYYY HH:mm') }}
@@ -632,6 +644,7 @@ tryOnMounted(async () => {
                                             class="cursor-pointer">Detail / Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
+                                            v-if="data.status == 'pending' || !data.status"
                                             @click="dialogState.delete.data = data;dialogState.delete.state = true"
                                             class="cursor-pointer">Delete
                                         </DropdownMenuItem>

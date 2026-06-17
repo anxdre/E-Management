@@ -34,7 +34,7 @@ class EmployeeAccountController extends Controller
     #[Get('/create', '.create')]
     public function createPage()
     {
-        $userGroup = CompanyGroup::query()->where('user_id', Auth::id())->get();
+        $userGroup = CompanyGroup::query()->where('mst_user_id', Auth::id())->get();
         return Inertia::render('Admin/EmployeeAccount/EmployeeAccountDetail',['companyGroup' => $userGroup]);
     }
 
@@ -42,13 +42,16 @@ class EmployeeAccountController extends Controller
     public function detail(int $id)
     {
         $data = User::query()
-            ->where('company_id', Auth::id())
-            ->where('type', 'employee')
+//            ->where('company_id', Auth::id())
+//            ->where('type', 'employee')
             ->with(['userDetail','groups'])
             ->find($id);
-        $userGroup = CompanyGroup::query()->where('user_id', Auth::id())->get();
+        $userGroup = CompanyGroup::query()->where('mst_user_id', Auth::id())->get();
         if ($data == null) {
             return new JsonBody(null, 'User not found', 404);
+        }
+        if ($data->type == 'superadmin' && Auth::user()->type != 'superadmin'){
+             abort(403, 'Unauthorized action');
         }
         return Inertia::render('Admin/EmployeeAccount/EmployeeAccountDetail', ['account' => $data, 'companyGroup' => $userGroup]);
     }
@@ -57,12 +60,16 @@ class EmployeeAccountController extends Controller
     public function detailJson(int $id)
     {
         $data = User::query()
-            ->where('company_id', Auth::id())
-            ->where('type', 'employee')
+//            ->where('company_id', Auth::id())
+//            ->where('type', 'employee')
             ->with(['userDetail','groups'])
             ->find($id);
         if ($data == null) {
             return new JsonBody(null, 'User not found', 404);
+        }
+
+        if ($data->type == 'superadmin' && Auth::user()->type != 'superadmin'){
+            return new JsonBody(null, 'Unauthorized', 401);
         }
          return new JsonBody($data, 'User found');
     }
@@ -72,8 +79,9 @@ class EmployeeAccountController extends Controller
     {
         $data = User::query()
             ->with('userDetail')
-            ->where('type', 'employee')
-            ->where('company_id', Auth::id())
+            ->where('type','!=','superadmin')
+//            ->where('type', 'employee')
+//            ->where('company_id', Auth::id())
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where(function ($query) use ($request) {
                     $query->where('email', 'like', "%{$request->search}%")
@@ -93,10 +101,10 @@ class EmployeeAccountController extends Controller
     #[Get('/all/by-group/json', '.json.group')]
     public function getAccountByGroup(request $request)
     {
-        $request->validate(['group_id' => 'required|numeric|exists:company_groups,id']);
+        $request->validate(['group_id' => 'required|numeric|exists:mst_company_groups,id']);
 
         $data = CompanyGroup::query()->with(['employee','employee.userDetail'])
-            ->where('user_id', Auth::id())
+//            ->where('mst_user_id', Auth::id())
             ->where('id',$request->group_id)
             ->first();
 
@@ -111,6 +119,7 @@ class EmployeeAccountController extends Controller
             'email' => 'required|string|email|max:255|unique:' . User::class,
             'phone' => 'required|min:10|unique:' . UserDetail::class,
             'address' => 'required|string|max:255',
+            'is_admin' => 'nullable|boolean',
             'company_group.*' => 'required|exists:'.CompanyGroup::class.',id',
             'profile_picture' => ['sometimes', File::image()->max(15 * 1024)],
             'password' => ['required', 'confirmed', Password::defaults()],
@@ -131,10 +140,10 @@ class EmployeeAccountController extends Controller
             $user = User::query()->create(['name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'user_detail_id' => $companyDetail->id,
+                'mst_user_detail_id' => $companyDetail->id,
                 'is_suspended' => $request->is_suspended,
-                'company_id' => Auth::id(),
-                'type' => 'employee']);
+                'mst_company_id' => Auth::id(),
+                'type' => $request->is_admin ? 'company' : 'employee']);
             $user->groups()->sync($request->company_group);
             DB::commit();
         } catch (\Exception $exception) {
@@ -151,7 +160,7 @@ class EmployeeAccountController extends Controller
     public function updateAccount(Request $request)
     {
         $request->validate(['name' => 'required|string',
-            'id' => 'required|numeric|exists:users,id',
+            'id' => 'required|numeric|exists:mst_users,id',
             'profile_picture' => ['sometimes', File::image()->max(15 * 1024)]
         ]);
 
@@ -192,7 +201,7 @@ class EmployeeAccountController extends Controller
     #[Delete('/delete/json', '.json.delete')]
     public function deleteAccount(Request $request)
     {
-        $request->validate(['data_id' => 'required|numeric|exists:company_groups,id']);
+        $request->validate(['data_id' => 'required|numeric|exists:mst_company_groups,id']);
 
         CompanyGroup::destroy($request->data_id);
 

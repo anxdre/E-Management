@@ -31,7 +31,7 @@ class PresenceLocationController extends Controller
     public function getAllLocation(request $request)
     {
         $data = PresenceLocation::query()
-            ->where('user_id', Auth::id())
+//            ->where('user_id', Auth::id())
             ->with('singleVerification')
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%{$request->search}%");
@@ -62,7 +62,7 @@ class PresenceLocationController extends Controller
     public function create(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'mst_user_id' => 'required|exists:mst_users,id',
             'name' => 'required',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
@@ -75,7 +75,7 @@ class PresenceLocationController extends Controller
         $data = PresenceLocation::query()->updateOrCreate([
             'id' => $request->get('id') ?? null,
         ], [
-            'user_id' => $request->get('user_id'),
+            'mst_user_id' => $request->get('mst_user_id'),
             'name' => $request->get('name'),
             'latitude' => $request->get('latitude'),
             'longitude' => $request->get('longitude'),
@@ -91,10 +91,10 @@ class PresenceLocationController extends Controller
     #[Delete('/delete/json', '.json.delete')]
     public function deleteLocation(Request $request)
     {
-        $request->validate(['id' => 'required|numeric|exists:presence_locations,id']);
+        $request->validate(['id' => 'required|numeric|exists:mst_presence_locations,id']);
 
-        CompanyGroup::destroy($request->data_id);
+        PresenceLocation::destroy($request->id);
 
-        return new JsonBody(null, message: 'Account deleted successfully');
+        return new JsonBody(null, message: 'Location deleted successfully');
     }
 }

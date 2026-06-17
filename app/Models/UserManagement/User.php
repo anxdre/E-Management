@@ -17,11 +17,8 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, HasApiTokens;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
+    protected $table = 'mst_users';
+
     protected $guarded = [
         'id','remember_token',
     ];
@@ -53,41 +50,46 @@ class User extends Authenticatable implements MustVerifyEmail
 
     function userDetail()
     {
-        return $this->hasOne(UserDetail::class, 'id','user_detail_id');
+        return $this->hasOne(UserDetail::class, 'id','mst_user_detail_id');
     }
 
     function groups()
     {
-        return $this->belongsToMany(CompanyGroup::class, 'group_has_users', 'user_id', 'group_id');
+        return $this->belongsToMany(CompanyGroup::class, 'pivot_group_has_users', 'mst_user_id', 'mst_company_group_id');
     }
 
     function presence(){
-        return $this->hasMany(PresenceEmployee::class, 'user_id', 'id');
+        return $this->hasMany(PresenceEmployee::class, 'mst_user_id', 'id');
     }
 
     public function company()
     {
-        return $this->belongsTo(User::class, 'company_id');
+        return $this->belongsTo(User::class, 'mst_company_id');
     }
 
     public function employees()
     {
-        return $this->hasMany(User::class, 'company_id');
+        return $this->hasMany(User::class, 'mst_company_id');
     }
 
     public function isCompany(): bool
     {
-        return is_null($this->company_id);
+        return $this->type == 'company';
     }
 
     public function isEmployee(): bool
     {
-        return !is_null($this->company_id);
+        return $this->type == 'employee';
+    }
+
+    public function isSuper(): bool
+    {
+        return $this->type == 'superadmin';
     }
 
     public function salaries()
     {
-        return $this->belongsToMany(CompanySalary::class, 'employee_salary', 'user_id', 'company_salary_id')
+        return $this->belongsToMany(CompanySalary::class, 'pivot_employee_salary', 'mst_user_id', 'mst_company_salary_id')
             ->using(EmployeeSalary::class)
             ->withPivot(['available_to_request', 'included_at_default'])
             ->withTimestamps();
