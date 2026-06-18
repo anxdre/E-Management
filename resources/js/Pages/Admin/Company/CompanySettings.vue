@@ -37,10 +37,7 @@ const formSchema = toTypedSchema(z.object({
     company_address: z.string().optional().or(z.literal('')),
     company_phone: z.string().optional().or(z.literal('')),
     npwp: z.string().optional().or(z.literal('')),
-    company_logo: z.any()
-        .refine((file: File) => file?.length !== 0, "File is required")
-        .refine((file) => file?.size < 15000000, "Max size is 15MB.")
-        .nullish(),
+    company_logo: z.any().nullable().optional(),
     auto_approve: z.boolean().optional(),
     auto_approve_mode: z.enum(['realtime', 'cron']).optional(),
     auto_approve_batch_hour: z.string().optional(),
@@ -56,19 +53,26 @@ const { handleSubmit, setFieldValue, setErrors } = useForm({
         company_address: props.profile?.company_address ?? '',
         company_phone: props.profile?.company_phone ?? '',
         npwp: props.profile?.npwp ?? '',
-        auto_approve: props.profile?.auto_approve ?? false,
+        auto_approve: Boolean(props.profile?.auto_approve ?? false),
         auto_approve_mode: props.profile?.auto_approve_mode ?? 'realtime',
         auto_approve_batch_hour: props.profile?.auto_approve_batch_hour
             ? String(props.profile.auto_approve_batch_hour).substring(0, 5)
             : '17:00',
         auto_approve_min_duration: props.profile?.auto_approve_min_duration ?? 60,
-        auto_approve_duplicate_coords: props.profile?.auto_approve_duplicate_coords ?? false,
+        auto_approve_duplicate_coords: Boolean(props.profile?.auto_approve_duplicate_coords ?? false),
     }
 })
 
 const onSubmit = handleSubmit((values, ctx) => {
     isLoading.value = true
-    axios.postForm(route('company-settings.json.update'), values, {})
+    // Strip null/undefined fields + convert booleans to '1'/'0'
+    // Laravel 'boolean' rule rejects 'true'/'false' strings from FormData
+    const payload = {} as Record<string, any>
+    for (const [k, v] of Object.entries(values)) {
+        if (v == null) continue
+        payload[k] = typeof v === 'boolean' ? (v ? '1' : '0') : v
+    }
+    axios.postForm(route('company-settings.json.update'), payload, {})
         .then(({ data: { data: responseData, message, status_code } }) => {
             successToast('Success', message)
             isEditing.value = false
@@ -316,11 +320,12 @@ onMounted(() => {
                                 </p>
 
                                 <FormField name="auto_approve" v-slot="{ value, handleChange }">
-                                    <FormItem class="flex flex-row items-center gap-2 space-y-0">
+                                    <FormItem class="flex flex-row items-start gap-2 space-y-0 flex-wrap">
                                         <FormControl>
                                             <Checkbox :disabled="!isEditing" :checked="value" @update:checked="handleChange" id="auto_approve"/>
                                         </FormControl>
                                         <FormLabel for="auto_approve" class="cursor-pointer">Enable Auto Approval</FormLabel>
+                                        <FormMessage class="w-full"/>
                                     </FormItem>
                                     <p class="text-xs text-muted-foreground mt-1 ml-6">When enabled, presences matching all criteria below will be auto-approved.</p>
                                 </FormField>
@@ -367,11 +372,12 @@ onMounted(() => {
                                 </FormField>
 
                                 <FormField name="auto_approve_duplicate_coords" v-slot="{ value, handleChange }">
-                                    <FormItem class="flex flex-row items-center gap-2 space-y-0 mt-3">
+                                    <FormItem class="flex flex-row items-start gap-2 space-y-0 mt-3 flex-wrap">
                                         <FormControl>
                                             <Checkbox :disabled="!isEditing" :checked="value" @update:checked="handleChange" id="auto_approve_duplicate_coords"/>
                                         </FormControl>
                                         <FormLabel for="auto_approve_duplicate_coords" class="cursor-pointer">Check duplicate GPS coordinates (last 7 days)</FormLabel>
+                                        <FormMessage class="w-full"/>
                                     </FormItem>
                                     <p class="text-xs text-muted-foreground mt-1 ml-6">Prevents auto-approval if the exact same coordinates appear in the last 7 days (indicates GPS spoofing).</p>
                                 </FormField>
