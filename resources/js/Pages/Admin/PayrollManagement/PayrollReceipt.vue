@@ -622,7 +622,8 @@ onMounted(async () => {
                                 No
                             </TableHead>
                             <TableHead>Employee Name</TableHead>
-                            <TableHead class="text-center">Total Value</TableHead>
+                            <TableHead class="text-center">Base Salary</TableHead>
+                            <TableHead class="text-center">Total Salary After Tax</TableHead>
                             <TableHead class="text-center">Status</TableHead>
                             <TableHead class="text-center">Transaction Date</TableHead>
                             <TableHead class="text-center">Requested At</TableHead>
@@ -645,6 +646,14 @@ onMounted(async () => {
                                         style: 'currency',
                                         currency: 'IDR'
                                     }).format(data.total_salary) : '-'
+                                }}
+                            </TableCell>
+                            <TableCell class="font-medium text-center">
+                                {{
+                                    data.salary_after_tax ? new Intl.NumberFormat('id-ID', {
+                                        style: 'currency',
+                                        currency: 'IDR'
+                                    }).format(data.salary_after_tax) : '-'
                                 }}
                             </TableCell>
                             <TableCell class="text-center">
@@ -686,7 +695,7 @@ onMounted(async () => {
                             </TableCell>
                         </TableRow>
                         <TableRow v-if="!dataset || dataset.length == 0">
-                            <TableCell colspan="7" class="text-center">
+                            <TableCell colspan="8" class="text-center">
                                 <div class="inline-flex gap-2 items-center text-lg">
                                     <TriangleAlert class="text-destructive animate-pulse"/>
                                     Tidak ada data
@@ -694,7 +703,7 @@ onMounted(async () => {
                             </TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell v-if="isLoading" colspan="4">
+                            <TableCell v-if="isLoading" colspan="8">
                                 <div class="w-full inline-flex justify-center animate-pulse">
                                     <LoaderCircleIcon class="size-10 animate-spin"/>
                                 </div>

@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\Employee\EmployeeAccountController;
 use App\Http\Controllers\Employee\EmployeeGroupController;
+use App\Http\Controllers\Employee\EmployeeRequestSalaryController;
 use App\Http\Controllers\MobileApi\AuthApiController;
 use App\Http\Controllers\MobileApi\LocationApiController;
 use App\Http\Controllers\MobileApi\PrensenceApiController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Admin\CompanySettingsController;
 use App\Http\Controllers\DeviceManagementController;
 use App\Http\Controllers\Presence\PresenceVerificationController;
 use App\Http\Controllers\MobileApi\ReceiptApiController;
+use App\Http\Controllers\MobileApi\RequestSalaryApiController;
 
 return [
 
@@ -82,6 +84,7 @@ return [
         //employee
         EmployeeAccountController::class,
         EmployeeGroupController::class,
+        EmployeeRequestSalaryController::class,
 
         //presence
         PresenceLocationController::class,
@@ -104,6 +107,7 @@ return [
         AuthApiController::class,
         PrensenceApiController::class,
         LocationApiController::class,
-        ReceiptApiController::class
+        ReceiptApiController::class,
+        RequestSalaryApiController::class
     ],
 ];

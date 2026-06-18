@@ -18,14 +18,6 @@ class UserSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
-        CompanyProfile::create([
-            'mst_user_id' => $superadmin->id,
-            'company_name' => 'Admin Utama',
-            'company_phone' => '02112345678',
-            'company_address' => 'Jl. Merdeka No. 1, Jakarta Pusat, 10110',
-            'company_email' => 'admin@admin.com',
-        ]);
-
         $company = User::create([
             'email' => 'company@admin.com',
             'password' => bcrypt('Password123'),
@@ -34,7 +26,6 @@ class UserSeeder extends Seeder
         ]);
 
         CompanyProfile::create([
-            'mst_user_id' => $company->id,
             'company_name' => 'PT. Maju Jaya Sejahtera',
             'company_phone' => '02155512345',
             'company_address' => 'Jl. Jenderal Sudirman No. 123, Jakarta Pusat, 10220',

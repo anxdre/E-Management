@@ -200,10 +200,27 @@ Check-in or check-out.
   - Out-of-radius → `note` appended, `status_by_admin` = `pending`
 - Verification code checked (403 if wrong)
 
+**Auto-approve behavior (realtime mode):**
+When company settings `auto_approve = true` and `auto_approve_mode = 'realtime'`, after all anomaly checks:
+- If **all** checks pass (in-radius, on-time, not-early, not-duplicate, min-duration ok) → `status_by_admin` = `approved`
+- If any check fails → stays `pending` (manual admin review needed)
+
+Anomaly checks are `canAutoApprove()`:
+| Check | Condition | Requires |
+|-------|-----------|----------|
+| Radius | GPS distance ≤ location tolerance | Tolerance set |
+| Late check-in | time_in ≤ end_hour | end_hour set |
+| Early check-out | time_out ≥ min_hour | min_hour set |
+| Late check-out | time_out ≤ max_hour | max_hour set |
+| Duplicate GPS | lat/lng not identical to previous record | — |
+| Min duration | diff time_out - time_in ≥ settings.min_duration | min_duration > 0 |
+
+Checks that reference null location fields are skipped automatically.
+
 **Response:** `200`
 ```json
 {
-  "data": { "id": 1, "mst_user_id": 1, "status_by_admin": "pending", ... },
+  "data": { "id": 1, "mst_user_id": 1, "status_by_admin": "approved", ... },
   "message": "Success"
 }
 ```
@@ -212,6 +229,22 @@ Check-in or check-out.
 - `403` — Wrong code / active check-in exists / no check-in detected
 - `404` — Verification not set up
 - `422` — Before operating hours / validation failed
+
+---
+
+#### `GET /api/export/excel`
+Export own presence history to Excel.
+
+**Query params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `status` | string? | `pending`, `approved`, `rejected` |
+| `location_id` | int? | Filter by location |
+| `date_start` | date? | Start date (Y-m-d) |
+| `date_end` | date? | End date (Y-m-d) |
+| `orderBy` | string? | `asc` / `desc` (default: desc) |
+
+**Response:** `200` — `.xlsx` file download.
 
 ---
 
@@ -309,18 +342,134 @@ Get salary receipt detail.
     "total_salary": 5000000,
     "salary_after_tax": 4500000,
     "user": {
-      "userDetail": { "fullname": "John Doe", "phone": "08123456789", ... },
-      "company": { "userDetail": { "fullname": "PT Example" } }
+      "userDetail": { "fullname": "John Doe", "phone": "08123456789", ... }
+    },
+    "company_profile": {
+      "company_name": "PT Example",
+      "company_phone": "021-123456",
+      "company_address": "Jakarta"
     },
     "companySalaryItem": [
-      { "id": 1, "name": "Gaji Pokok", "quantity": 1, "total_value": 4000000, ... },
-      { "id": 2, "name": "PPh 21", "quantity": 1, "total_value": 500000, ... }
-    ]
+      {
+        "id": 1, "name": "Gaji Pokok", "quantity": 1, "total_value": 4000000,
+        "is_requested": false, "request_info": null
+      },
+      {
+        "id": 3, "name": "Lembur", "quantity": 10, "total_value": 500000,
+        "is_requested": true,
+        "request_info": {
+          "id": 1, "quantity": 10, "status": "approved",
+          "approvedBy": { "userDetail": { "fullname": "Manager" } }
+        }
+      }
+    ],
+    "total_subtract": 0
   }
 }
 ```
 
 ---
+
+#### `GET /{payroll}/export/pdf`
+Export own salary receipt as PDF.
+
+**URL params:** `{payroll}` = SalaryReceipt ID (must belong to authenticated user).
+
+**Response:** `200` — `.pdf` file download (inline).
+
+**Errors:**
+- `403` — Receipt does not belong to authenticated user
+- `404` — Receipt not found
+
+---
+
+### Request Salary (Mobile)
+
+Base URL: `/Request/Salary/api/` (middleware: `auth:sanctum`)
+
+#### `GET /available-components`
+Get salary components available for request.
+
+**Query params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `user_id` | int | Employee user ID |
+
+Returns only components where `available_to_request = true` in pivot.
+
+**Response:** `200`
+```json
+{
+  "data": [
+    {
+      "id": 1, "name": "Lembur", "salary": 50000,
+      "type": "hourly", "calculation_type": "add"
+    }
+  ]
+}
+```
+
+---
+
+#### `POST /create`
+Submit a salary component request.
+
+**Request:**
+```json
+{
+  "user_id": 1,
+  "component_id": 1,
+  "quantity": 10,
+  "note": "Lembur project A"
+}
+```
+
+**Response:** `200`
+```json
+{
+  "data": { "id": 1, "status": "pending" },
+  "message": "Request submitted successfully"
+}
+```
+
+**Errors:**
+- `403` — Component not available for request
+- `422` — Validation failed
+
+---
+
+#### `GET /all`
+Get own salary requests.
+
+**Query params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `user_id` | int | Employee user ID |
+| `status` | string? | `pending`, `approved`, `rejected` |
+| `date_start` | date? | Start date |
+| `date_end` | date? | End date |
+
+**Response:** `200` (paginated)
+```json
+{
+  "data": {
+    "data": [
+      {
+        "id": 1,
+        "mst_user_id": 1,
+        "mst_company_salary_id": 1,
+        "quantity": 10,
+        "status": "pending",
+        "is_realized": false,
+        "note": "Lembur project A",
+        "created_at": "...",
+        "component": { "id": 1, "name": "Lembur", "salary": 50000, "type": "hourly" }
+      }
+    ],
+    "total": 3, "per_page": 10, ...
+  }
+}
+```
 
 ## Web JSON Endpoints (Admin SPA)
 
@@ -869,8 +1018,69 @@ Response — receipt detail with requested salary info:
 ```
 
 ---
+### Employee Request Salary (Web Admin)
 
-### Company Settings
+Base: `/Employee/Request-Salary/` (middleware: `auth`)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/` | Render request salary list page |
+| `GET` | `/all/json` | Get all requests (paginated) |
+| `PUT` | `/approve-reject/json` | Approve or reject a request |
+
+**`GET /all/json`**
+
+Query params:
+| Param | Type | Description |
+|-------|------|-------------|
+| `search` | string? | Search by employee name |
+| `status` | string? | `pending`, `approved`, `rejected` |
+| `date_start` | date? | Start date |
+| `date_end` | date? | End date |
+| `page` | int? | Page number |
+
+Response:
+```json
+{
+  "data": {
+    "data": [
+      {
+        "id": 1,
+        "mst_user_id": 1,
+        "mst_company_salary_id": 1,
+        "quantity": 10,
+        "status": "pending",
+        "is_realized": false,
+        "note": "Lembur project A",
+        "created_at": "...",
+        "user": { "userDetail": { "fullname": "John" } },
+        "component": { "id": 1, "name": "Lembur", "salary": 50000, "type": "hourly" }
+      }
+    ],
+    "total": 10, "per_page": 10, ...
+  }
+}
+```
+
+**`PUT /approve-reject/json`**
+
+Request:
+```json
+{
+  "id": 1,
+  "status": true
+}
+```
+`status: true` → `approved`, `false` → `rejected`. Sets `mst_approved_by` to current admin.
+
+Response:
+```json
+{
+  "message": "Successfully approve request salary"
+}
+```
+
+---
 
 Base: `/Company/Settings/` (middleware: `auth`, `only-company`)
 

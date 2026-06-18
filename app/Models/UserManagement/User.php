@@ -3,7 +3,6 @@
 namespace App\Models\UserManagement;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Models\CompanyProfile;
 use App\Models\Payroll\CompanySalary;
 use App\Models\Payroll\EmployeeSalary;
 use App\Models\PresenceManagement\PresenceEmployee;
@@ -53,11 +52,6 @@ class User extends Authenticatable implements MustVerifyEmail
     function userDetail()
     {
         return $this->belongsTo(UserDetail::class, 'mst_user_detail_id')->withTrashed()->withDefault();
-    }
-
-    function companyProfile()
-    {
-        return $this->hasOne(CompanyProfile::class, 'mst_user_id');
     }
 
     function groups()

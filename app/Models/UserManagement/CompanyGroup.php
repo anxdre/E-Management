@@ -11,11 +11,6 @@ class CompanyGroup extends Model
     protected $guarded = ['id'];
     use HasFactory;
 
-    public function company()
-    {
-        return $this->belongsTo(User::class, 'mst_user_id','id');
-    }
-
     public function employee(){
         return $this->belongsToMany(User::class, 'pivot_group_has_users','mst_company_group_id','mst_user_id');
     }

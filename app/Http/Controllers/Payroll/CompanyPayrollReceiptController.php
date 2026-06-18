@@ -116,11 +116,11 @@ class CompanyPayrollReceiptController extends Controller
                         'mst_company_salary_id' => $component['id'],
                         'quantity' => $component['quantity'],
                         'total_value' => $component['total_ammount'],
-                        'trx_employee_requested_salary_id' => $component['employee_requested_salary_id'] ?? null,
+                        'trx_employee_requested_salary_id' => $component['trx_employee_requested_salary_id'] ?? null,
                     ]);
 
-                    if ($component['employee_requested_salary_id'] ?? null) {
-                        EmployeeRequestedSalary::where('id', $component['employee_requested_salary_id'])
+                    if ($component['trx_employee_requested_salary_id'] ?? null) {
+                        EmployeeRequestedSalary::where('id', $component['trx_employee_requested_salary_id'])
                             ->update(['is_realized' => true]);
                     }
                 });
@@ -166,10 +166,7 @@ class CompanyPayrollReceiptController extends Controller
 
             // 3. Get requested salary components that were approved and not yet realized
             $requestedSalaryComponents = EmployeeRequestedSalary::query()
-                ->with('employeeSalary')
-                ->whereHas('employeeSalary', function ($q) use ($user) {
-                    $q->where('mst_user_id', $user->id);
-                })
+                ->where('mst_user_id', $user->id)
                 ->whereBetween('approved_date', [$startDate, $endDate])
                 ->where('status', 'approved')
                 ->where('is_realized', false)
@@ -230,7 +227,7 @@ class CompanyPayrollReceiptController extends Controller
 
         // Process requested salary components
         foreach ($requestedSalaryComponents as $requestedSalary) {
-            $component = CompanySalary::find($requestedSalary->employeeSalary->mst_company_salary_id);
+            $component = CompanySalary::find($requestedSalary->mst_company_salary_id);
             if ($component) {
                 $calculatedComponent = $this->calculateComponentAmount($component, $totalWorkHours, $presenceRecords, $requestedSalary->quantity);
 
@@ -389,11 +386,11 @@ class CompanyPayrollReceiptController extends Controller
                         'mst_company_salary_id' => $component['id'],
                         'quantity' => $component['quantity'],
                         'total_value' => $component['total_ammount'],
-                        'trx_employee_requested_salary_id' => $component['employee_requested_salary_id'] ?? null,
+                        'trx_employee_requested_salary_id' => $component['trx_employee_requested_salary_id'] ?? null,
                     ]);
 
-                    if ($component['employee_requested_salary_id'] ?? null) {
-                        EmployeeRequestedSalary::where('id', $component['employee_requested_salary_id'])
+                    if ($component['trx_employee_requested_salary_id'] ?? null) {
+                        EmployeeRequestedSalary::where('id', $component['trx_employee_requested_salary_id'])
                             ->update(['is_realized' => true]);
                     }
                 });
@@ -467,6 +464,23 @@ class CompanyPayrollReceiptController extends Controller
             ->where('calculation_type', 'subtract')
             ->where('is_tax', false)
             ->sum('salary');
+
+        $receiptItemIds = SalaryReceiptItem::query()
+            ->where('trx_salary_receipt_id', $payroll)
+            ->whereNotNull('trx_employee_requested_salary_id')
+            ->pluck('trx_employee_requested_salary_id', 'mst_company_salary_id');
+
+        $requestedSalaries = EmployeeRequestedSalary::query()
+            ->with('approvedBy.userDetail')
+            ->whereIn('id', $receiptItemIds->values())
+            ->get()
+            ->keyBy('id');
+
+        $receipt->companySalaryItem->each(function ($item) use ($receiptItemIds, $requestedSalaries) {
+            $reqId = $receiptItemIds->get($item->id);
+            $item->is_requested = !is_null($reqId);
+            $item->request_info = $reqId ? $requestedSalaries->get($reqId) : null;
+        });
 
         $company = CompanyProfile::query()->first();
 

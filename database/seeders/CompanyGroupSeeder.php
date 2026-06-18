@@ -10,8 +10,6 @@ class CompanyGroupSeeder extends Seeder
 {
     public function run(): void
     {
-        $company = User::where('email', 'company@admin.com')->first();
-
         $groups = [
             'Engineering'      => ['rudi@email.com', 'agus@email.com', 'hendra@email.com', 'dimas@email.com'],
             'Marketing'        => ['siti@email.com', 'dewi@email.com', 'rina@email.com'],
@@ -21,7 +19,6 @@ class CompanyGroupSeeder extends Seeder
 
         foreach ($groups as $name => $emails) {
             $group = CompanyGroup::create([
-                'mst_user_id' => $company->id,
                 'name' => $name,
             ]);
 

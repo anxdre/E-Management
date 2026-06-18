@@ -6,6 +6,7 @@ use App\DateHelper;
 use App\Exports\PresenceHistoryExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JsonBody;
+use App\Models\Payroll\SalaryReceipt;
 use App\Models\PresenceManagement\PresenceEmployee;
 use App\Models\PresenceManagement\PresenceLocation;
 use App\Models\PresenceManagement\PresenceVerification;
@@ -17,6 +18,7 @@ use Dentro\Yalr\Attributes\Middleware;
 use Dentro\Yalr\Attributes\Name;
 use Dentro\Yalr\Attributes\Post;
 use Dentro\Yalr\Attributes\Prefix;
+use Dentro\Yalr\Attributes\Put;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +36,47 @@ class EmployeePresenceController extends Controller
     public function index(Request $request)
     {
         return Inertia::render('Employee/EmployeePresence/PresenceHistory');
+    }
+
+    #[Get('/{user}/stats/json', '.json.stats', ['scope-company'])]
+    public function getStats(User $user)
+    {
+        $now = now();
+        $startOfMonth = $now->copy()->startOfMonth();
+
+        $totalDayWork = PresenceEmployee::where('mst_user_id', $user->id)
+            ->whereIn('status_by_admin', ['pending', 'approved'])
+            ->whereDate('time_in', '>=', $startOfMonth)
+            ->whereDate('time_in', '<=', $now)
+            ->whereNotNull('time_in')
+            ->whereNotNull('time_out')
+            ->count();
+
+        $totalLate = PresenceEmployee::where('mst_user_id', $user->id)
+            ->whereIn('status_by_admin', ['pending', 'approved'])
+            ->whereDate('time_in', '>=', $startOfMonth)
+            ->where('note', 'like', '%Terlambat%')
+            ->count();
+
+        $totalOnTime = PresenceEmployee::where('mst_user_id', $user->id)
+            ->whereIn('status_by_admin', ['pending', 'approved'])
+            ->whereDate('time_in', '>=', $startOfMonth)
+            ->whereNotNull('time_in')
+            ->where(function ($q) {
+                $q->whereNull('note')->orWhere('note', 'not like', '%Terlambat%');
+            })
+            ->count();
+
+        $totalEarnings = SalaryReceipt::where('mst_user_id', $user->id)
+            ->where('status', 'approved')
+            ->sum('salary_after_tax');
+
+        return new JsonBody([
+            'total_day_work' => $totalDayWork,
+            'total_on_time' => $totalOnTime,
+            'total_late' => $totalLate,
+            'total_earnings' => (int) $totalEarnings,
+        ]);
     }
 
     #[Get('/{user}/json', '.json.all', ['scope-company'])]
@@ -149,6 +192,29 @@ class EmployeePresenceController extends Controller
         }
 
         return new JsonBody($employeePresence, 'Success');
+    }
+
+    #[Put('/{user}/status/json', '.json.status', ['scope-company', 'only-company'])]
+    public function updateStatus(Request $request, User $user)
+    {
+        $request->validate([
+            'id' => 'required|exists:trx_presence_employees,id',
+            'status' => 'required|in:approved,rejected',
+            'time_in' => 'nullable|date',
+            'time_out' => 'nullable|date',
+            'note' => 'nullable|string',
+        ]);
+
+        $presence = PresenceEmployee::query()->where('mst_user_id', $user->id)->findOrFail($request->id);
+        $update = ['status_by_admin' => $request->status];
+
+        if ($request->filled('time_in')) $update['time_in'] = $request->time_in;
+        if ($request->filled('time_out')) $update['time_out'] = $request->time_out;
+        if ($request->has('note')) $update['note'] = $request->note;
+
+        $presence->update($update);
+
+        return new JsonBody($presence, message: 'Presence ' . $request->status . ' successfully');
     }
 
     #[Get('/{user}/export/excel', '.export.excel', ['scope-company'])]

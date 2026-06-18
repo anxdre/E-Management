@@ -330,20 +330,20 @@ onMounted(() => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <TableRow v-for="(data,index) in data.company_salary_item">
+                                <TableRow v-for="(salItem,index) in data.company_salary_item">
                                     <TableCell class="hidden sm:table-cell text-center">
                                         {{ index + 1 }}
                                     </TableCell>
                                     <TableCell v-if="!isEdit" class="font-medium">
                                         <div class="flex flex-col">
                                             <div class="inline-flex items-center gap-1">
-                                                {{ data.name }}
-                                                <Badge v-if="data.is_requested" variant="outline" class="text-xs">Requested</Badge>
+                                                {{ salItem.name }}
+                                                <Badge v-if="salItem.is_requested" variant="outline" class="text-xs">Requested</Badge>
                                             </div>
-                                            <span v-if="data.is_requested && data.request_info" class="text-xs text-muted-foreground mt-0.5 leading-tight">
-                                                Requested {{ dayjs(data.request_info.created_at).format('DD/MM/YYYY') }}
-                                                · Approved by {{ data.request_info.approved_by?.company_profile?.company_name ?? data.request_info.approved_by?.user_detail?.fullname ?? '-' }}
-                                                {{ data.request_info.approved_date ? dayjs(data.request_info.approved_date).format('DD/MM/YYYY') : '' }}
+                                            <span v-if="salItem.is_requested && salItem.request_info" class="text-xs text-muted-foreground mt-0.5 leading-tight">
+                                                Requested {{ dayjs(salItem.request_info.created_at).format('DD/MM/YYYY') }}
+                                                · Approved by {{ data.company_profile?.company_name ?? salItem.request_info.approved_by?.user_detail?.fullname ?? '-' }}
+                                                {{ salItem.request_info.approved_date ? dayjs(salItem.request_info.approved_date).format('DD/MM/YYYY') : '' }}
                                             </span>
                                         </div>
                                     </TableCell>
@@ -355,14 +355,14 @@ onMounted(() => {
                                                         variant="outline"
                                                         role="combobox"
                                                         class="w-[280px] justify-between">
-                                                        {{ data.name ? data.name : 'Select Payroll Item...' }}
+                                                        {{ salItem.name ? salItem.name : 'Select Payroll Item...' }}
                                                         <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50"/>
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent class="w-[280px] p-0">
-                                                    <Command :model-value="data.name"
-                                                             @update:model-value="val => data.name = val"
-                                                             :shouldFilter="false">
+                                                    <Command :model-value="salItem.name"
+                                                              @update:model-value="val => salItem.name = val"
+                                                              :shouldFilter="false">
                                                         <CommandInput
                                                             @input="(val)=>searchPayrollItem = val.target.value"
                                                             placeholder="Search Item"/>
@@ -373,15 +373,15 @@ onMounted(() => {
                                                                     v-for="item in listOfPayroll"
                                                                     :value="item.name"
                                                                     @select.prevent="() => {
-                                                                      data.id = item.id
-                                                                      data.name = item.name
-                                                                      data.is_tax = item.is_tax
-                                                                      data.type = item.type
-                                                                      data.calculation_type = item.calculation_type
-                                                                      data.salary = item.salary
+                                                                      salItem.id = item.id
+                                                                      salItem.name = item.name
+                                                                      salItem.is_tax = item.is_tax
+                                                                      salItem.type = item.type
+                                                                      salItem.calculation_type = item.calculation_type
+                                                                      salItem.salary = item.salary
                                                                     }">
                                                                     <Check
-                                                                        :class="cn('mr-2 h-4 w-4',data.id === item.id ? 'opacity-100' : 'opacity-0')"
+                                                                        :class="cn('mr-2 h-4 w-4',salItem.id === item.id ? 'opacity-100' : 'opacity-0')"
                                                                     />
                                                                     {{ item.name }}
                                                                 </CommandItem>
@@ -394,21 +394,21 @@ onMounted(() => {
                                         </div>
                                     </TableCell>
 
-                                    <TableCell v-if="!data.is_tax" class="font-medium text-center">
+                                    <TableCell v-if="!salItem.is_tax" class="font-medium text-center">
                                         {{
-                                            data.salary ? new Intl.NumberFormat('id-ID', {
+                                            salItem.salary ? new Intl.NumberFormat('id-ID', {
                                                 style: 'currency',
                                                 currency: 'IDR'
-                                            }).format(data.salary) : '-'
+                                            }).format(salItem.salary) : '-'
                                         }}
                                     </TableCell>
                                     <TableCell v-else class="font-medium text-center">
-                                        {{ data.salary }}%
+                                        {{ salItem.salary }}%
                                     </TableCell>
-                                    <TableCell v-if="!data.is_tax" class="text-center">
+                                    <TableCell v-if="!salItem.is_tax" class="text-center">
                                         <Badge
-                                            :variant="data.calculation_type == 'add' ? 'success' : 'destructive'">
-                                            {{ data.calculation_type }}
+                                            :variant="salItem.calculation_type == 'add' ? 'success' : 'destructive'">
+                                            {{ salItem.calculation_type }}
                                         </Badge>
                                     </TableCell>
                                     <TableCell v-else class="text-center">
@@ -418,29 +418,29 @@ onMounted(() => {
                                         </Badge>
                                     </TableCell>
                                     <TableCell class="text-center">
-                                        {{ data.type }}
+                                        {{ salItem.type }}
                                     </TableCell>
                                     <TableCell v-if="!isEdit" class="text-center">
-                                        {{ data.detail_item.quantity }}
+                                        {{ salItem.detail_item.quantity }}
                                     </TableCell>
                                      <TableCell v-else class="text-center">
-                                        <Input type="number" min="0" v-if="data.type == 'fixed'" :default-value="data.detail_item.quantity"  v-model="data.quantity"/>
+                                        <Input type="number" min="0" v-if="salItem.type == 'fixed' || salItem.is_requested" :default-value="salItem.detail_item.quantity"  v-model="salItem.quantity"/>
                                         <Label v-else>-</Label>
                                     </TableCell>
-                                    <TableCell v-if="!isEdit && !data.is_tax && data.calculation_type == 'add' " class="text-right">
+                                    <TableCell v-if="!isEdit && !salItem.is_tax && salItem.calculation_type == 'add' " class="text-right">
                                         {{
-                                            data.detail_item.total_value ? new Intl.NumberFormat('id-ID', {
+                                            salItem.detail_item.total_value ? new Intl.NumberFormat('id-ID', {
                                                 style: 'currency',
                                                 currency: 'IDR'
-                                            }).format(data.detail_item.total_value) : '-'
+                                            }).format(salItem.detail_item.total_value) : '-'
                                         }}
                                     </TableCell>
-                                    <TableCell v-if="!isEdit && (data.is_tax || data.calculation_type == 'subtract')" class="text-right text-red-500">
+                                    <TableCell v-if="!isEdit && (salItem.is_tax || salItem.calculation_type == 'subtract')" class="text-right text-red-500">
                                         - {{
-                                            data.detail_item.total_value ? new Intl.NumberFormat('id-ID', {
+                                            salItem.detail_item.total_value ? new Intl.NumberFormat('id-ID', {
                                                 style: 'currency',
                                                 currency: 'IDR'
-                                            }).format(data.detail_item.total_value) : '-'
+                                            }).format(salItem.detail_item.total_value) : '-'
                                         }}
                                     </TableCell>
                                     <TableCell v-if="isEdit" class="text-right text-red-500">

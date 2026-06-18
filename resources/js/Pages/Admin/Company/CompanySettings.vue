@@ -8,10 +8,12 @@ import { useForm } from "vee-validate";
 import { onMounted, ref } from "vue";
 import { Input } from "@/shadcn/ui/input";
 import { Button } from "@/shadcn/ui/button";
+import { Checkbox } from "@/shadcn/ui/checkbox";
 import { ChevronLeft, LoaderCircleIcon, PencilIcon, SaveIcon } from "lucide-vue-next";
 import axios from "axios";
 import { cn, errorToast, navigateLink, successToast } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shadcn/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shadcn/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shadcn/ui/avatar";
 import LayoutWrapper from "@/Layouts/LayoutWrapper.vue";
 import { useFileDialog } from "@vueuse/core";
@@ -39,6 +41,11 @@ const formSchema = toTypedSchema(z.object({
         .refine((file: File) => file?.length !== 0, "File is required")
         .refine((file) => file?.size < 15000000, "Max size is 15MB.")
         .nullish(),
+    auto_approve: z.boolean().optional(),
+    auto_approve_mode: z.enum(['realtime', 'cron']).optional(),
+    auto_approve_batch_hour: z.string().optional(),
+    auto_approve_min_duration: z.number({coerce: true}).int().min(0).optional(),
+    auto_approve_duplicate_coords: z.boolean().optional(),
 }))
 
 const { handleSubmit, setFieldValue, setErrors } = useForm({
@@ -49,6 +56,13 @@ const { handleSubmit, setFieldValue, setErrors } = useForm({
         company_address: props.profile?.company_address ?? '',
         company_phone: props.profile?.company_phone ?? '',
         npwp: props.profile?.npwp ?? '',
+        auto_approve: props.profile?.auto_approve ?? false,
+        auto_approve_mode: props.profile?.auto_approve_mode ?? 'realtime',
+        auto_approve_batch_hour: props.profile?.auto_approve_batch_hour
+            ? String(props.profile.auto_approve_batch_hour).substring(0, 5)
+            : '17:00',
+        auto_approve_min_duration: props.profile?.auto_approve_min_duration ?? 60,
+        auto_approve_duplicate_coords: props.profile?.auto_approve_duplicate_coords ?? false,
     }
 })
 
@@ -293,8 +307,78 @@ onMounted(() => {
                                 </FormItem>
                             </FormField>
 
+                            <!-- Auto Approval Settings -->
+                            <div class="border-t pt-4 mt-6">
+                                <h3 class="font-semibold mb-1">Auto Approval</h3>
+                                <p class="text-sm text-muted-foreground mb-4">
+                                    Automatically approve presence records that pass all configured checks.
+                                    Employees with clean attendance get approved instantly; anomalous records stay pending for manual review.
+                                </p>
+
+                                <FormField name="auto_approve" v-slot="{ value, handleChange }">
+                                    <FormItem class="flex flex-row items-center gap-2 space-y-0">
+                                        <FormControl>
+                                            <Checkbox :disabled="!isEditing" :checked="value" @update:checked="handleChange" id="auto_approve"/>
+                                        </FormControl>
+                                        <FormLabel for="auto_approve" class="cursor-pointer">Enable Auto Approval</FormLabel>
+                                    </FormItem>
+                                    <p class="text-xs text-muted-foreground mt-1 ml-6">When enabled, presences matching all criteria below will be auto-approved.</p>
+                                </FormField>
+
+                                <FormField name="auto_approve_mode" v-slot="{ value, handleChange }">
+                                    <FormItem class="mt-3">
+                                        <FormLabel>Mode</FormLabel>
+                                        <FormControl>
+                                            <Select :disabled="!isEditing" :model-value="value" @update:model-value="handleChange">
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select mode"/>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="realtime">Realtime (approve at checkout)</SelectItem>
+                                                    <SelectItem value="cron">Cron (batch at set hour)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </FormControl>
+                                        <p class="text-xs text-muted-foreground mt-1">Realtime: approves at the moment of checkout. Cron: batch-approves all eligible records at a set hour daily.</p>
+                                        <FormMessage/>
+                                    </FormItem>
+                                </FormField>
+
+                                <FormField name="auto_approve_batch_hour" v-slot="{ componentField }">
+                                    <FormItem class="mt-3">
+                                        <FormLabel>Batch Hour (cron mode)</FormLabel>
+                                        <FormControl>
+                                            <Input :disabled="!isEditing" v-bind="componentField" type="time" placeholder="17:00"/>
+                                        </FormControl>
+                                        <p class="text-xs text-muted-foreground mt-1">Only used in Cron mode. Recommended: set to end of work hours.</p>
+                                        <FormMessage/>
+                                    </FormItem>
+                                </FormField>
+
+                                <FormField name="auto_approve_min_duration" v-slot="{ componentField }">
+                                    <FormItem class="mt-3">
+                                        <FormLabel>Min Work Duration (minutes)</FormLabel>
+                                        <FormControl>
+                                            <Input :disabled="!isEditing" v-bind="componentField" type="number" min="0" placeholder="60"/>
+                                        </FormControl>
+                                        <p class="text-xs text-muted-foreground mt-1">Minimum minutes between time-in and time-out to qualify for auto-approval. Set 0 to disable this check. This is independent from each location's working hours.</p>
+                                        <FormMessage/>
+                                    </FormItem>
+                                </FormField>
+
+                                <FormField name="auto_approve_duplicate_coords" v-slot="{ value, handleChange }">
+                                    <FormItem class="flex flex-row items-center gap-2 space-y-0 mt-3">
+                                        <FormControl>
+                                            <Checkbox :disabled="!isEditing" :checked="value" @update:checked="handleChange" id="auto_approve_duplicate_coords"/>
+                                        </FormControl>
+                                        <FormLabel for="auto_approve_duplicate_coords" class="cursor-pointer">Check duplicate GPS coordinates (last 7 days)</FormLabel>
+                                    </FormItem>
+                                    <p class="text-xs text-muted-foreground mt-1 ml-6">Prevents auto-approval if the exact same coordinates appear in the last 7 days (indicates GPS spoofing).</p>
+                                </FormField>
+                            </div>
+
                             <Button v-if="isEditing" :disabled="isLoading" type="submit"
-                                    class="w-full gap-2">
+                                    class="w-full gap-2 mt-4">
                                 <SaveIcon class="h-4 w-4"/>
                                 Save
                                 <LoaderCircleIcon v-if="isLoading" class="animate-spin"/>

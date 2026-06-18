@@ -44,7 +44,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ $company->fullname  }}</h1>
+        <h1>{{ $company->company_name  }}</h1>
         <hr>
         <h4>Payroll Receipt Detail</h4>
     </div>

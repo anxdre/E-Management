@@ -97,6 +97,13 @@ const sheetOpen = ref(false)
                                 Employee Payroll
                             </Button>
                         </ul>
+                        <ul>
+                            <Button @click="navigateLink(route('employee-request-salary.index'))" variant="ghost"
+                                    class="hover:text-foreground gap-2 justify-start w-full rounded">
+                                <UserCheck size="18"/>
+                                Request Salary
+                            </Button>
+                        </ul>
                     </PopoverContent>
                 </Popover>
             </div>
@@ -204,6 +211,15 @@ const sheetOpen = ref(false)
                                             class="hover:text-foreground gap-2 justify-start w-full rounded">
                                             <HandCoins size="18"/>
                                             Employee Payroll
+                                        </Button>
+                                    </ul>
+                                    <ul>
+                                        <Button
+                                            @click="sheetOpen = false; navigateLink(route('employee-request-salary.index'))"
+                                            variant="ghost"
+                                            class="hover:text-foreground gap-2 justify-start w-full rounded">
+                                            <UserCheck size="18"/>
+                                            Request Salary
                                         </Button>
                                     </ul>
                                 </AccordionContent>

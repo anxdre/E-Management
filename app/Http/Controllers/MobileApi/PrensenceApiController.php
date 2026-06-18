@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\MobileApi;
 
+use App\AutoApproveHelper;
 use App\DateHelper;
+use App\Exports\PresenceHistoryExport;
 use App\Http\Resources\JsonBody;
+use App\Models\CompanyProfile;
 use App\Models\PresenceManagement\PresenceEmployee;
 use App\Models\PresenceManagement\PresenceLocation;
 use App\Models\PresenceManagement\PresenceVerification;
@@ -19,11 +22,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
 
 #[Prefix('Presence'), Name('api-presence'), Middleware('auth:sanctum')]
 class PrensenceApiController
 {
-    use DateHelper, PositionHelper;
+    use DateHelper, PositionHelper, AutoApproveHelper;
 
     #[Get('/{user}', '.all', ['auth:sanctum'])]
     public function getAllHistory(request $request, User $user)
@@ -208,6 +212,20 @@ class PrensenceApiController
             $employeePresence->attachment = "$path/$filename";
         }
 
+        // Auto-approve: realtime mode — upgrade to approved if all anomaly checks pass
+        if ($user->isEmployee()) {
+            $settings = CompanyProfile::first();
+            if ($settings?->auto_approve && $settings->auto_approve_mode === 'realtime') {
+                // For checkout, ensure time_in from history is available for min duration check
+                if ($request->status == 'out' && $historyAttendance && !$employeePresence->time_in) {
+                    $employeePresence->time_in = $historyAttendance->time_in;
+                }
+                if ($this->canAutoApprove($employeePresence, $presenceLocation, $settings)) {
+                    $employeePresence->status_by_admin = 'approved';
+                }
+            }
+        }
+
         if ($request->status == 'in'){
             $employeePresence->save();
         }
@@ -217,5 +235,23 @@ class PrensenceApiController
         }
 
         return new JsonBody($employeePresence, 'Success');
+    }
+
+    #[Get('api/export/excel', '.api.export.excel', ['auth:sanctum'])]
+    public function exportExcel(Request $request)
+    {
+        $user = Auth::user();
+
+        $filters = [
+            'status' => $request->status,
+            'location_id' => $request->location_id,
+            'date_start' => $request->date_start,
+            'date_end' => $request->date_end,
+            'order_by' => $request->orderBy ?? 'desc',
+        ];
+
+        $fileName = 'presence-history-' . $user->id . '-' . now()->format('Ymd-His') . '.xlsx';
+
+        return Excel::download(new PresenceHistoryExport($user->id, $filters), $fileName);
     }
 }

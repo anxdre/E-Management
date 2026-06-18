@@ -36,11 +36,12 @@ class EmployeeAccountController extends Controller
     #[Get('/create', '.create')]
     public function createPage()
     {
-        $userGroup = Auth::user()->isSuper()
-            ? CompanyGroup::query()->get()
-            : CompanyGroup::query()->where('mst_user_id', Auth::id())->get();
+        $userGroup = CompanyGroup::query()->get();
 
-        return Inertia::render('Admin/EmployeeAccount/EmployeeAccountDetail',['companyGroup' => $userGroup]);
+        return Inertia::render('Admin/EmployeeAccount/EmployeeAccountDetail',[
+            'companyGroup' => $userGroup,
+            'companyProfile' => CompanyProfile::first(),
+        ]);
     }
 
     #[Get('/{id}', '.detail')]
@@ -48,9 +49,7 @@ class EmployeeAccountController extends Controller
     {
         $data = User::with('groups')->find($id);
 
-        $userGroup = Auth::user()->isSuper()
-            ? CompanyGroup::query()->get()
-            : CompanyGroup::query()->where('mst_user_id', Auth::id())->get();
+        $userGroup = CompanyGroup::query()->get();
 
         if ($data == null) {
             return new JsonBody(null, 'User not found', 404);
@@ -61,11 +60,13 @@ class EmployeeAccountController extends Controller
 
         if ($data->isEmployee()) {
             $data->load('userDetail');
-        } else {
-            $data->load('companyProfile');
         }
 
-        return Inertia::render('Admin/EmployeeAccount/EmployeeAccountDetail', ['account' => $data, 'companyGroup' => $userGroup]);
+        return Inertia::render('Admin/EmployeeAccount/EmployeeAccountDetail', [
+            'account' => $data,
+            'companyGroup' => $userGroup,
+            'companyProfile' => CompanyProfile::first(),
+        ]);
     }
 
     #[Get('/json/{user}', '.json.detail',['scope-company'])]
@@ -84,7 +85,7 @@ class EmployeeAccountController extends Controller
         if ($data->isEmployee()) {
             $data->load(['userDetail','groups']);
         } else {
-            $data->load(['companyProfile','groups']);
+            $data->load('groups');
         }
 
         return new JsonBody($data, 'User found');
@@ -157,14 +158,7 @@ class EmployeeAccountController extends Controller
             ]);
 
             if ($isAdmin) {
-                CompanyProfile::query()->create([
-                    'mst_user_id' => $user->id,
-                    'company_name' => $request->name,
-                    'company_address' => $request->address,
-                    'company_phone' => $request->phone,
-                    'company_logo' => $request->has('profile_picture') ? $request->get('profile_picture') : null,
-                    'npwp' => $request->npwp,
-                ]);
+                // Single company — no new CompanyProfile created for each admin
             } else {
                 $employeeDetail = UserDetail::query()->create([
                     'fullname' => $request->name,
@@ -230,16 +224,19 @@ class EmployeeAccountController extends Controller
 
                 $user->groups()->sync($request->company_group);
             } else {
-                $user->companyProfile()->update([
-                    'company_name' => $request->name,
-                    'company_address' => $request->address,
-                    'company_phone' => $request->phone,
-                    'npwp' => $request->npwp,
-                ]);
+                $profile = CompanyProfile::first();
+                if ($profile) {
+                    $profile->update([
+                        'company_name' => $request->name,
+                        'company_address' => $request->address,
+                        'company_phone' => $request->phone,
+                        'npwp' => $request->npwp,
+                    ]);
 
-                if ($request->hasFile('profile_picture')) {
-                    $path = $request->file('profile_picture')->store('profile_pictures', 'public');
-                    $user->companyProfile()->update(['company_logo' => $path]);
+                    if ($request->hasFile('profile_picture')) {
+                        $path = $request->file('profile_picture')->store('profile_pictures', 'public');
+                        $profile->update(['company_logo' => $path]);
+                    }
                 }
             }
 

@@ -21,7 +21,7 @@ import {
 import { Button } from '@/shadcn/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shadcn/ui/card'
 import { CrudDialogAdapter } from "@/lib/DialogState/CrudDialogAdapter";
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import axios from "axios";
 import { appUrl, errorToast, formatDate, formatWorkingHour, PaginationOption, successToast } from "@/lib/utils";
 import { debounceFilter, watchPausable } from "@vueuse/core";
@@ -94,6 +94,19 @@ const form = ref({
 })
 const locationDataSet = ref([])
 const profile = ref({})
+const stats = ref({
+    total_day_work: 0,
+    total_on_time: 0,
+    total_late: 0,
+    total_earnings: 0,
+})
+
+function getStats() {
+    axios.get(route('employee-presence.json.stats', { user: profile.value.id }))
+        .then(({ data: { data } }) => {
+            stats.value = data
+        })
+}
 
 function getDataset() {
     paginationWatcher.pause()
@@ -140,6 +153,66 @@ function deleteItem(dataId: number) {
         })
         .finally(() => {
             dialogState.delete.progress = false
+        })
+}
+
+const isEditing = ref(false)
+const editForm = ref({
+    time_in: null as string | null,
+    time_out: null as string | null,
+})
+const confirmDialog = ref({
+    show: false,
+    status: '' as 'approved' | 'rejected' | '',
+    progress: false,
+})
+
+watch(() => dialogState.show.state, (val) => {
+    if (val && dialogState.show.data) {
+        editForm.value = {
+            time_in: dialogState.show.data.time_in,
+            time_out: dialogState.show.data.time_out,
+        }
+        isEditing.value = false
+    }
+})
+
+function enterEditMode() {
+    editForm.value = {
+        time_in: dialogState.show.data.time_in,
+        time_out: dialogState.show.data.time_out,
+    }
+    isEditing.value = true
+}
+
+function cancelEdit() {
+    isEditing.value = false
+    editForm.value = { time_in: null, time_out: null }
+}
+
+function updateStatus(status: 'approved' | 'rejected') {
+    confirmDialog.value = { show: true, status, progress: false }
+}
+
+function confirmAction() {
+    const status = confirmDialog.value.status as 'approved' | 'rejected'
+    confirmDialog.value.progress = true
+    isEditing.value = false
+    dialogState.show.state = false
+    axios.put(route('employee-presence.json.status', { user: profile.value.id }), {
+        id: dialogState.show.data.id,
+        status,
+        time_in: editForm.value.time_in,
+        time_out: editForm.value.time_out,
+    })
+        .then(({ data: { message } }) => {
+            successToast('Success', message)
+            getDataset()
+            confirmDialog.value = { show: false, status: '', progress: false }
+        })
+        .catch((err) => {
+            errorToast('Error !', err.response.data.message)
+            confirmDialog.value = { show: false, status: '', progress: false }
         })
 }
 
@@ -257,6 +330,7 @@ onMounted(async () => {
     await getProfile()
     await getAllLocation()
     getDataset()
+    getStats()
     await getCurrentLocation()
 })
 
@@ -309,22 +383,22 @@ onMounted(async () => {
                             <Badge variant="secondary" class="absolute -top-3 left-8">Working Hour</Badge>
                             <div class="grid md:grid-cols-6 items-center gap-4 !mt-0">
                                 <Label for="code" class="col-span-1 md:text-right">Time In</Label>
-                                <VueDatePicker disabled :format="formatDate(dialogState.show.data.time_in)"
+                                <VueDatePicker :disabled="!isEditing" :format="formatDate(editForm.time_in)"
                                                :preview-format="formatDate" class=" col-span-2"
-                                               :modelValue="dialogState.show.data.time_in"/>
+                                               v-model="editForm.time_in"/>
 
                                 <Label for="code" class="col-span-1 md:text-right">Working Hour</Label>
                                 <Input disabled class=" col-span-2"
-                                       :model-value="formatWorkingHour(dialogState.show.data.time_in, dialogState.show.data.time_out) || '-'"/>
+                                       :model-value="formatWorkingHour(editForm.time_in, editForm.time_out) || '-'"/>
 
                             </div>
 
 
                             <div class="grid md:grid-cols-6 items-center gap-4">
                                 <Label for="code" class="col-span-1 md:text-right">Time Out</Label>
-                                <VueDatePicker disabled :format="formatDate(dialogState.show.data.time_out)"
+                                <VueDatePicker :disabled="!isEditing" :format="formatDate(editForm.time_out)"
                                                :preview-format="formatDate" class="col-span-2 "
-                                               :modelValue="dialogState.show.data.time_out"/>
+                                               v-model="editForm.time_out"/>
 
                                 <Label for="code" class="col-span-1 md:text-right">Extended Hour</Label>
                                 <Input disabled class=" col-span-2"
@@ -337,7 +411,7 @@ onMounted(async () => {
 
                             <div class="grid md:grid-cols-4 items-center gap-4 !mt-0">
                                 <Label for="note" class="md:text-right">Note</Label>
-                                <Textarea disabled :model-value="dialogState.show.data.note" class="col-span-3"/>
+                                <Input disabled class="col-span-3" :model-value="dialogState.show.data.note || '-'"/>
                             </div>
 
                             <div class="grid md:grid-cols-4 items-center gap-4">
@@ -368,9 +442,56 @@ onMounted(async () => {
                     </div>
                 </div>
                 <DialogFooter class="p-6 pt-0">
-                    <DialogClose>
-                        <Button variant="destructive">Close</Button>
-                    </DialogClose>
+                    <div class="flex w-full justify-between items-center">
+                        <div v-if="isEditing" class="space-x-2">
+                            <Button class="bg-green-600 text-white hover:bg-green-700" @click="updateStatus('approved')">Approve</Button>
+                            <Button variant="destructive" @click="updateStatus('rejected')">Reject</Button>
+                            <Button variant="outline" @click="cancelEdit">Cancel</Button>
+                        </div>
+                        <div v-else-if="dialogState.show.data?.status_by_admin === 'pending'" class="space-x-2">
+                            <Button @click="enterEditMode">Approval & Edit</Button>
+                        </div>
+                        <DialogClose class="ml-auto">
+                            <Button variant="outline">Close</Button>
+                        </DialogClose>
+                    </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        <Dialog v-model:open="confirmDialog.show">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>{{ confirmDialog.status === 'approved' ? 'Approve' : 'Reject' }} Presence</DialogTitle>
+                    <DialogDescription>
+                        Are you sure to {{ confirmDialog.status }} this presence record?
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-2 text-sm" v-if="confirmDialog.show">
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Time In:</span>
+                        <span>{{ formatDate(editForm.time_in) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Time Out:</span>
+                        <span>{{ formatDate(editForm.time_out) || '-' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-muted-foreground">Note:</span>
+                        <span>{{ dialogState.show.data?.note || '-' }}</span>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="confirmDialog.show = false; confirmDialog.status = ''; confirmDialog.progress = false">Cancel</Button>
+                    <Button v-if="confirmDialog.status === 'approved'" class="bg-green-600 text-white hover:bg-green-700"
+                            :disabled="confirmDialog.progress" @click="confirmAction">
+                        <LoaderCircleIcon v-if="confirmDialog.progress" class="animate-spin mr-1 size-4"/>
+                        Approve
+                    </Button>
+                    <Button v-else variant="destructive"
+                            :disabled="confirmDialog.progress" @click="confirmAction">
+                        <LoaderCircleIcon v-if="confirmDialog.progress" class="animate-spin mr-1 size-4"/>
+                        Reject
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -390,10 +511,10 @@ onMounted(async () => {
                         </CardHeader>
                         <CardContent>
                             <div class="text-2xl font-bold">
-                                3
+                                {{ stats.total_day_work }}
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                -2 since yesterday
+                                This month
                             </p>
                         </CardContent>
                     </Card>
@@ -406,10 +527,10 @@ onMounted(async () => {
                         </CardHeader>
                         <CardContent>
                             <div class="text-2xl font-bold">
-                                12
+                                {{ stats.total_on_time }}
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                +20.1% from last month
+                                This month
                             </p>
                         </CardContent>
                     </Card>
@@ -422,10 +543,10 @@ onMounted(async () => {
                         </CardHeader>
                         <CardContent>
                             <div class="text-2xl font-bold">
-                                23
+                                {{ stats.total_late }}
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                +180.1% from last month
+                                This month
                             </p>
                         </CardContent>
                     </Card>
@@ -438,10 +559,10 @@ onMounted(async () => {
                         </CardHeader>
                         <CardContent>
                             <div class="text-2xl font-bold">
-                                35
+                                {{ stats.total_earnings ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(stats.total_earnings) : '-' }}
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                +2 since yesterday
+                                Approved salary total
                             </p>
                         </CardContent>
                     </Card>

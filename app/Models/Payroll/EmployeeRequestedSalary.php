@@ -3,6 +3,7 @@
 namespace App\Models\Payroll;
 
 use App\Models\UserManagement\User;
+use App\Models\Payroll\CompanySalary;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -19,9 +20,14 @@ class EmployeeRequestedSalary extends Model
         'approved_date' => 'datetime',
     ];
 
-    public function employeeSalary()
+    public function user()
     {
-        return $this->belongsTo(EmployeeSalary::class, 'pivot_employee_salary_id', 'id');
+        return $this->belongsTo(User::class, 'mst_user_id', 'id');
+    }
+
+    public function component()
+    {
+        return $this->belongsTo(CompanySalary::class, 'mst_company_salary_id', 'id');
     }
 
     public function approvedBy()

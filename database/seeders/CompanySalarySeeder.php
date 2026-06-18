@@ -51,14 +51,11 @@ class CompanySalarySeeder extends Seeder
         $createRequest = function ($email, $componentName, $quantity, $status) use ($companyUser) {
             $user = User::where('email', $email)->first();
             $salary = CompanySalary::where('name', $componentName)->first();
-            $pivot = DB::table('pivot_employee_salary')
-                ->where('mst_user_id', $user->id)
-                ->where('mst_company_salary_id', $salary->id)
-                ->first();
 
-            if ($pivot) {
+            if ($user && $salary) {
                 EmployeeRequestedSalary::create([
-                    'pivot_employee_salary_id' => $pivot->id,
+                    'mst_user_id' => $user->id,
+                    'mst_company_salary_id' => $salary->id,
                     'quantity' => $quantity,
                     'status' => $status,
                     'mst_approved_by' => $status === 'approved' ? $companyUser->id : null,

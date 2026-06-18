@@ -116,6 +116,25 @@ npm run dev
 docker compose up -d
 ```
 
+## Cron Setup
+
+Laravel scheduler requires **one** server cron entry to run:
+
+```cron
+* * * * * cd /path/to/project && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Laravel evaluates all scheduled tasks internally (`->daily()`, `->everyMinute()`, etc). The server does not need individual cron entries per command.
+
+### Defined Tasks
+
+| Command | Schedule | Description |
+|---------|----------|-------------|
+| `presence:auto-approve` | Every minute | Batch-approve pending presences (cron mode, runs at configured hour only) |
+| `telescope:prune` | Daily | Prune old Telescope entries |
+
+`presence:auto-approve` respects the company's `auto_approve_batch_hour` setting — runs every minute but only executes approval logic at the configured hour.
+
 ## Notes
 
 - `only-company` middleware checks `isSuper()` (not `isCompany()`), superadmin-only

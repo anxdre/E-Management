@@ -27,7 +27,8 @@ defineOptions({
 })
 const props = defineProps<{
     account?: any,
-    companyGroup: any
+    companyGroup: any,
+    companyProfile?: any
 }>()
 const isLoading = ref(false)
 const isEditing = ref(false)
@@ -36,7 +37,7 @@ const isCompanyUser = ref(props.account?.type == 'superadmin' || props.account?.
 
 const profileData = computed(() => {
     if (!props.account) return {}
-    return isCompanyUser.value ? props.account.company_profile : props.account.user_detail
+    return isCompanyUser.value ? props.companyProfile : props.account.user_detail
 })
 
 const formSchema = toTypedSchema(z.object({
@@ -72,11 +73,11 @@ const formSchema = toTypedSchema(z.object({
 const { handleSubmit, isFieldDirty, setErrors, setFieldValue, values } = useForm({
     validationSchema: formSchema, initialValues: {
         id: props.account?.id,
-        name: isCompanyUser.value ? props.account?.company_profile?.company_name : props.account?.user_detail?.fullname,
+        name: isCompanyUser.value ? props.companyProfile?.company_name : props.account?.user_detail?.fullname,
         email: props.account?.email,
-        address: isCompanyUser.value ? props.account?.company_profile?.company_address : props.account?.user_detail?.address,
-        phone: isCompanyUser.value ? props.account?.company_profile?.company_phone : props.account?.user_detail?.phone,
-        npwp: props.account?.company_profile?.npwp ?? '',
+        address: isCompanyUser.value ? props.companyProfile?.company_address : props.account?.user_detail?.address,
+        phone: isCompanyUser.value ? props.companyProfile?.company_phone : props.account?.user_detail?.phone,
+        npwp: props.companyProfile?.npwp ?? '',
         is_suspended: props.account?.is_suspended?.toString(),
         profile_picture: props.account?.profile_picture,
         company_group: props.account?.groups,
@@ -141,7 +142,7 @@ onMounted(() => {
     console.log(props.account)
     if (props.account) {
         const imgPath = isCompanyUser.value
-            ? props.account?.company_profile?.company_logo
+            ? props.companyProfile?.company_logo
             : props.account?.user_detail?.picture_profile
         if (imgPath) {
             profileImage.value = `${import.meta.env.VITE_APP_URL}/storage/${imgPath}`;

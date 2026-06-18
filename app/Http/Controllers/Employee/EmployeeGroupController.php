@@ -14,7 +14,6 @@ use Dentro\Yalr\Attributes\Post;
 use Dentro\Yalr\Attributes\Prefix;
 use Dentro\Yalr\Attributes\Put;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 #[Prefix('Employee/Group'), Name('employee-group'), Middleware('auth')]
@@ -53,7 +52,6 @@ class EmployeeGroupController extends Controller
 
         CompanyGroup::query()->create([
             'name' => $request->name,
-            'mst_user_id' => Auth::id()
         ]);
 
         return new JsonBody(null, message: 'Group added successfully');

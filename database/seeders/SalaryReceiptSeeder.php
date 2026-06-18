@@ -55,10 +55,7 @@ class SalaryReceiptSeeder extends Seeder
             ->get();
 
         $requestedSalaries = EmployeeRequestedSalary::query()
-            ->with('employeeSalary')
-            ->whereHas('employeeSalary', function ($q) use ($user) {
-                $q->where('mst_user_id', $user->id);
-            })
+            ->where('mst_user_id', $user->id)
             ->where('status', 'approved')
             ->where('is_realized', false)
             ->get();
@@ -87,7 +84,7 @@ class SalaryReceiptSeeder extends Seeder
         }
 
         foreach ($requestedSalaries as $requested) {
-            $salary = CompanySalary::find($requested->employeeSalary->mst_company_salary_id);
+            $salary = CompanySalary::find($requested->mst_company_salary_id);
             if (!$salary) continue;
 
             $result = $this->calc($salary, $totalWorkHours, $totalPresenceRecord, $requested->quantity);
