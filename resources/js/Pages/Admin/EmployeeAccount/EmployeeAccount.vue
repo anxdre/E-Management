@@ -77,10 +77,11 @@ function getDataset(page?: number) {
 }
 
 function deleteItem(dataId: number) {
-    axios.delete(route('employee-group.json.delete'), { data: { data_id: dataId } })
+    axios.delete(route('employee-account.json.delete'), { data: { data_id: dataId } })
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
             successToast('Success', message)
             getDataset(paginateControl.currentPage)
+            dialogState.delete.state = false
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)

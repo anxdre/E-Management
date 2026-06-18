@@ -4,7 +4,7 @@ import { z } from "zod";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shadcn/ui/form";
 import { vAutoAnimate } from "@formkit/auto-animate";
 import { useForm } from "vee-validate";
-import { onMounted, ref, useAttrs } from "vue";
+import {computed, onMounted, ref, useAttrs} from "vue";
 import { Input } from "@/shadcn/ui/input";
 import { Button } from "@/shadcn/ui/button";
 import { ChevronLeft, LoaderCircleIcon, MapPinCheck, NotepadText, PencilIcon } from "lucide-vue-next";
@@ -32,6 +32,12 @@ const props = defineProps<{
 const isLoading = ref(false)
 const isEditing = ref(false)
 const isCreate = ref(props.account == undefined)
+const isCompanyUser = ref(props.account?.type == 'superadmin' || props.account?.type == 'company')
+
+const profileData = computed(() => {
+    if (!props.account) return {}
+    return isCompanyUser.value ? props.account.company_profile : props.account.user_detail
+})
 
 const formSchema = toTypedSchema(z.object({
     id: z.number().nullish(),
@@ -41,14 +47,13 @@ const formSchema = toTypedSchema(z.object({
     phone: z.string({ required_error: "must be filled" }).min(8, "8 digit required")
         .regex(PhoneRegex, 'wrong phone number format')
         .transform(value => {
-            // Menghapus karakter +, -, dan spasi
             let transformedValue = value.replace(/[+\-\s]/g, '');
-            // Mengganti awalan +62 menjadi 0
             if (transformedValue.startsWith('62')) {
                 transformedValue = '0' + transformedValue.slice(2);
             }
             return transformedValue;
         }),
+    npwp: z.string().nullish(),
     profile_picture: z.any()
         .refine((file: File) => file?.length !== 0, "File is required")
         .refine((file) => file?.size < 15000000, "Max size is 15MB.")
@@ -58,7 +63,6 @@ const formSchema = toTypedSchema(z.object({
     password: z.union([z.string().min(8), z.literal(''), z.null()]).optional(),
     password_confirmation: z.union([z.string().min(8), z.literal(''), z.null()]).optional()
 }).refine((values) => {
-    // Ensure passwords match if they are provided
     return !(values.password && values.password_confirmation && values.password !== values.password_confirmation);
 }, {
     message: "Password didn't match",
@@ -68,11 +72,12 @@ const formSchema = toTypedSchema(z.object({
 const { handleSubmit, isFieldDirty, setErrors, setFieldValue, values } = useForm({
     validationSchema: formSchema, initialValues: {
         id: props.account?.id,
-        name: props.account?.user_detail.fullname,
+        name: isCompanyUser.value ? props.account?.company_profile?.company_name : props.account?.user_detail?.fullname,
         email: props.account?.email,
-        address: props.account?.user_detail.address,
-        phone: props.account?.user_detail.phone,
-        is_suspended: props.account?.is_suspended.toString(),
+        address: isCompanyUser.value ? props.account?.company_profile?.company_address : props.account?.user_detail?.address,
+        phone: isCompanyUser.value ? props.account?.company_profile?.company_phone : props.account?.user_detail?.phone,
+        npwp: props.account?.company_profile?.npwp ?? '',
+        is_suspended: props.account?.is_suspended?.toString(),
         profile_picture: props.account?.profile_picture,
         company_group: props.account?.groups,
     }
@@ -135,7 +140,12 @@ onChange((files) => {
 onMounted(() => {
     console.log(props.account)
     if (props.account) {
-        profileImage.value = `${import.meta.env.VITE_APP_URL}/storage/${props.account.user_detail.picture_profile}`;
+        const imgPath = isCompanyUser.value
+            ? props.account?.company_profile?.company_logo
+            : props.account?.user_detail?.picture_profile
+        if (imgPath) {
+            profileImage.value = `${import.meta.env.VITE_APP_URL}/storage/${imgPath}`;
+        }
     }
 })
 
@@ -192,7 +202,7 @@ onMounted(() => {
                         <span v-if="!isCreate && !isEditing" class="text-xs text-muted-foreground">*you must enter edit mode to change picture</span>
                         <span v-else
                               class="text-xs text-muted-foreground">*don't forget to save before leaving the page</span>
-                        <div v-if="!isCreate && !isEditing && props.account?.type != 'superadmin'" class="w-full flex flex-col items-center space-y-2">
+                        <div v-if="!isCreate && !isEditing && props.account?.type != 'superadmin' && !props.account?.deleted_at" class="w-full flex flex-col items-center space-y-2">
                             <Button @click="navigateLink(route('company-receipt.user.index',{user:$page.props.auth.user.id,employee:props.account?.id}))" class="w-full gap-4">
                                 <NotepadText/>
                                 Manage Employee Salary
@@ -270,7 +280,23 @@ onMounted(() => {
                                 </FormItem>
                             </FormField>
 
-                            <FormField v-if="props.account?.type != 'superadmin'" name="is_suspended" :validate-on-blur="!isFieldDirty"
+                            <FormField v-if="isCompanyUser" name="npwp" :validate-on-blur="!isFieldDirty"
+                                       v-slot="{ componentField }">
+                                <FormItem v-auto-animate>
+                                    <FormLabel>NPWP</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            :disabled="!isCreate && !isEditing"
+                                            v-bind="componentField"
+                                            type="text"
+                                            placeholder="enter company NPWP"
+                                        />
+                                    </FormControl>
+                                    <FormMessage/>
+                                </FormItem>
+                            </FormField>
+
+                            <FormField v-if="!isCompanyUser" name="is_suspended" :validate-on-blur="!isFieldDirty"
                                        v-slot="{ componentField }">
                                 <FormItem v-auto-animate>
                                     <FormLabel>Status</FormLabel>
@@ -320,7 +346,7 @@ onMounted(() => {
                                 </FormItem>
                             </FormField>
 
-                            <FormField v-if="props.account?.id != 1" name="company_group" :validate-on-blur="!isFieldDirty"
+                            <FormField v-if="!isCompanyUser && props.account?.id != 1" name="company_group" :validate-on-blur="!isFieldDirty"
                                        v-slot="{ componentField }">
                                 <FormItem v-auto-animate>
                                     <FormLabel>Company Group</FormLabel>

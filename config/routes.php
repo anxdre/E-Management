@@ -14,6 +14,7 @@ use App\Http\Controllers\Payroll\CompanyPayrollReceiptController;
 use App\Http\Controllers\Payroll\EmployeePayrollTypeController;
 use App\Http\Controllers\Presence\EmployeePresenceController;
 use App\Http\Controllers\Presence\PresenceLocationController;
+use App\Http\Controllers\Admin\CompanySettingsController;
 use App\Http\Controllers\DeviceManagementController;
 use App\Http\Controllers\Presence\PresenceVerificationController;
 use App\Http\Controllers\MobileApi\ReceiptApiController;
@@ -92,7 +93,10 @@ return [
         EmployeePayrollTypeController::class,
 
         //receipt
-        CompanyPayrollReceiptController::class
+        CompanyPayrollReceiptController::class,
+
+        //company settings
+        CompanySettingsController::class,
 
     ],
     'api' => [

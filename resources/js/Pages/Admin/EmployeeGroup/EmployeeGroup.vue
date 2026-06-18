@@ -81,6 +81,7 @@ function deleteItem(dataId: number) {
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
             successToast('Success', message)
             getDataset(paginateControl.currentPage)
+            dialogState.delete.state = false
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)

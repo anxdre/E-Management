@@ -594,8 +594,8 @@ tryOnMounted(async () => {
                             <TableCell class="hidden sm:table-cell text-center">
                                 {{ index + 1 }}
                             </TableCell>
-                            <TableCell class="font-medium">
-                                {{ data.user.user_detail.fullname }}
+                            <TableCell :class="`font-medium ${data.user?.deleted_at ? 'text-red-500' : ''}`">
+                                {{ data.user?.user_detail?.fullname || 'deleted account' }}
                             </TableCell>
                             <TableCell class="font-medium text-center">
                                 {{
@@ -641,10 +641,10 @@ tryOnMounted(async () => {
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         <DropdownMenuItem
                                             @click="()=>{editData(data)}"
-                                            class="cursor-pointer">Detail / Edit
+                                            class="cursor-pointer">{{ data.user?.deleted_at ? 'Detail' : 'Detail / Edit' }}
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            v-if="data.status == 'pending' || !data.status"
+                                            v-if="!data.user?.deleted_at && (data.status == 'pending' || !data.status)"
                                             @click="dialogState.delete.data = data;dialogState.delete.state = true"
                                             class="cursor-pointer">Delete
                                         </DropdownMenuItem>

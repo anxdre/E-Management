@@ -11,6 +11,7 @@ import {
     PlusCircle,
     Search,
     TriangleAlert,
+    X,
 } from 'lucide-vue-next'
 
 import { Badge } from '@/shadcn/ui/badge'
@@ -159,7 +160,14 @@ function getEmployeeByGroup() {
     isLoading.value = true
     axios.get(route('employee-account.json.group', { group_id: companySalaryForm.value.companyGroupId }))
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
-            generateForm.value.assigned_to = dataFromServer
+            const target = dialogState.add.state ? generateForm.value.assigned_to : companySalaryForm.value.assigned_to
+            const existingIds = new Set(target.map((u: any) => u.id))
+            const newUsers = dataFromServer.filter((u: any) => !existingIds.has(u.id))
+            if (dialogState.add.state) {
+                generateForm.value.assigned_to = [...target, ...newUsers]
+            } else {
+                companySalaryForm.value.assigned_to = [...target, ...newUsers]
+            }
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)
@@ -247,8 +255,12 @@ function editData(data: any) {
    navigateLink(route('employee-payroll.detail', { user: companySalaryForm.value.user_id, payroll: data.id }))
 }
 
-function deleteAssignedEmployee(index) {
-    generateForm.value.assigned_to.splice(index, 1)
+function deleteAssignedEmployee(index: number) {
+    if (dialogState.add.state) {
+        generateForm.value.assigned_to.splice(index, 1)
+    } else {
+        companySalaryForm.value.assigned_to.splice(index, 1)
+    }
 }
 
 function exportExcel() {
@@ -323,7 +335,14 @@ onMounted(async () => {
                                 <Separator/>
                             </div>
                             <div class="w-full h-full flex flex-col gap-2">
-                                <Label class="ps-2">Assign employee by group</Label>
+                                <div class="flex justify-between items-center">
+                                    <Label class="ps-2">Assign employee by group</Label>
+                                    <Button v-if="generateForm.assigned_to.length > 0" variant="outline" size="sm"
+                                            class="text-destructive"
+                                            @click="generateForm.assigned_to = []">
+                                        <X class="h-3 w-3 me-1"/> Clear All ({{ generateForm.assigned_to.length }})
+                                    </Button>
+                                </div>
                                 <Label class="ps-2 text-xs text-muted-foreground">Tips : You can generate customized
                                     salary each employee
                                     at <strong>Employee Management</strong></Label>
@@ -338,30 +357,33 @@ onMounted(async () => {
                                         </SelectGroup>
                                     </SelectContent>
                                 </Select>
-                                <ul>
-                                    <li v-for="(user,index) in generateForm.assigned_to">
+                                <ul class="flex flex-col gap-2">
+                                    <li v-for="(user, index) in generateForm.assigned_to" :key="user.id">
                                         <Card class="w-full p-4">
-                                            <Button @click="deleteAssignedEmployee(index)"
-                                                    class="float-right w-fit rounded-full h-fit p-0 bg-black">
-                                                <CircleX/>
-                                            </Button>
-                                            <div class="flex flex-col justify-between">
-                                                <Label class="text-lg font-bold">
-                                                    {{ user.user_detail?.fullname }}
-                                                </Label>
-                                                <label
-                                                    class="text-sm text-muted-foreground font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                                    {{ user.email }}
-                                                </label>
-                                                <label
-                                                    class="text-sm text-muted-foreground font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                                    {{ user.user_detail?.phone }}
-                                                </label>
-                                                <Badge
-                                                    :variant="user.is_suspended ? 'destructive':'success'"
-                                                    class="text-sm font-medium w-fit mt-2">
-                                                    {{ user.is_suspended ? 'Suspended' : 'Active' }} Employee
-                                                </Badge>
+                                            <div class="flex items-start justify-between">
+                                                <div class="flex flex-col justify-between">
+                                                    <Label class="text-lg font-bold">
+                                                        {{ user.user_detail?.fullname }}
+                                                    </Label>
+                                                    <label
+                                                        class="text-sm text-muted-foreground font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                                        {{ user.email }}
+                                                    </label>
+                                                    <label
+                                                        class="text-sm text-muted-foreground font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                                        {{ user.user_detail?.phone }}
+                                                    </label>
+                                                    <Badge
+                                                        :variant="user.is_suspended ? 'destructive':'success'"
+                                                        class="text-sm font-medium w-fit mt-2">
+                                                        {{ user.is_suspended ? 'Suspended' : 'Active' }} Employee
+                                                    </Badge>
+                                                </div>
+                                                <Button variant="ghost" size="icon"
+                                                        class="h-6 w-6 text-destructive shrink-0"
+                                                        @click="deleteAssignedEmployee(index)">
+                                                    <X class="h-4 w-4"/>
+                                                </Button>
                                             </div>
                                         </Card>
                                     </li>
@@ -472,7 +494,14 @@ onMounted(async () => {
                                 <Separator/>
                             </div>
                             <div v-if="companySalaryForm.included_at_default" class="w-full h-full flex flex-col gap-2">
-                                <Label class="ps-2">Assign employee by group</Label>
+                                <div class="flex justify-between items-center">
+                                    <Label class="ps-2">Assign employee by group</Label>
+                                    <Button v-if="companySalaryForm.assigned_to.length > 0" variant="outline" size="sm"
+                                            class="text-destructive"
+                                            @click="companySalaryForm.assigned_to = []">
+                                        <X class="h-3 w-3 me-1"/> Clear All ({{ companySalaryForm.assigned_to.length }})
+                                    </Button>
+                                </div>
                                 <Label class="ps-2 text-xs text-muted-foreground">Tips : You can edit each employee
                                     configuration later at employee account management</Label>
                                 <Select v-model="companySalaryForm.companyGroupId"
@@ -486,13 +515,20 @@ onMounted(async () => {
                                         </SelectGroup>
                                     </SelectContent>
                                 </Select>
-                                <ul>
-                                    <li v-for="user in companySalaryForm.assigned_to">
+                                <ul class="flex flex-col gap-2">
+                                    <li v-for="(user, userIndex) in companySalaryForm.assigned_to" :key="user.id">
                                         <Card class="w-full p-4">
                                             <div class="flex flex-col justify-between gap-4">
-                                                <Label class="text-lg font-bold">
-                                                    {{ user.user_detail?.fullname }}
-                                                </Label>
+                                                <div class="flex justify-between items-start">
+                                                    <Label class="text-lg font-bold">
+                                                        {{ user.user_detail?.fullname }}
+                                                    </Label>
+                                                    <Button variant="ghost" size="icon"
+                                                            class="h-6 w-6 text-destructive shrink-0"
+                                                            @click="deleteAssignedEmployee(userIndex)">
+                                                        <X class="h-4 w-4"/>
+                                                    </Button>
+                                                </div>
                                                 <div class="w-full h-full inline-flex items-center gap-4">
                                                     <Checkbox v-model="user.pivot.available_to_request"/>
                                                     <div class="grid">
@@ -600,8 +636,8 @@ onMounted(async () => {
                             <TableCell class="hidden sm:table-cell text-center">
                                 {{ index + 1 }}
                             </TableCell>
-                            <TableCell class="font-medium">
-                                {{ data.user.user_detail.fullname }}
+                            <TableCell :class="`font-medium ${data.user?.deleted_at ? 'text-red-500' : ''}`">
+                                {{ data.user?.user_detail?.fullname || 'deleted account'}}
                             </TableCell>
                             <TableCell class="font-medium text-center">
                                 {{
@@ -639,9 +675,9 @@ onMounted(async () => {
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         <DropdownMenuItem
                                             @click="()=>{editData(data)}"
-                                            class="cursor-pointer">Detail / Edit
+                                            class="cursor-pointer">{{ data.user?.deleted_at ? 'Detail' : 'Detail / Edit' }}
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem v-if="data.status == 'pending' || !data.status"
+                                        <DropdownMenuItem v-if="!data.user?.deleted_at && (data.status == 'pending' || !data.status)"
                                             @click="dialogState.delete.data = data;dialogState.delete.state = true"
                                             class="cursor-pointer">Delete
                                         </DropdownMenuItem>

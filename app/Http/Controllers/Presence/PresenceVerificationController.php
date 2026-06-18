@@ -34,7 +34,7 @@ class PresenceVerificationController extends Controller
         $second = CarbonImmutable::now('Asia/Jakarta')->format('s');
         $randPrefix = rand(10, 99);
         $verificationCode = PresenceVerification::query()->create([
-            'presence_location_id' => $request->get('id'),
+            'mst_presence_location_id' => $request->get('id'),
             'verification_hash' => "$randPrefix$date$second"
         ]);
         return new JsonBody([$verificationCode],'new verification code, generated');

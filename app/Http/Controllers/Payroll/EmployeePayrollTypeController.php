@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Payroll;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JsonBody;
 use App\Models\Payroll\CompanySalary;
+use App\Models\Payroll\EmployeeRequestedSalary;
 use App\Models\Payroll\SalaryReceipt;
+use App\Models\Payroll\SalaryReceiptItem;
 use App\Models\UserManagement\User;
 use Dentro\Yalr\Attributes\Delete;
 use Dentro\Yalr\Attributes\Get;
@@ -42,13 +44,32 @@ class EmployeePayrollTypeController extends Controller
         }
 
         $data = SalaryReceipt::query()
-            ->with(['user.userDetail', 'user.company.userDetail', 'companySalaryItem'])
+            ->with(['user.userDetail', 'companySalaryItem'])
             ->find($payroll);
+
+        $data->company_profile = \App\Models\CompanyProfile::query()->first();
 
         $data->total_subtract = $data->companySalaryItem
             ->where('calculation_type', 'subtract')
             ->where('is_tax', false)
             ->sum('salary');
+
+        $receiptItemIds = SalaryReceiptItem::query()
+            ->where('trx_salary_receipt_id', $payroll)
+            ->whereNotNull('trx_employee_requested_salary_id')
+            ->pluck('trx_employee_requested_salary_id', 'mst_company_salary_id');
+
+        $requestedSalaries = EmployeeRequestedSalary::query()
+            ->with('approvedBy.userDetail')
+            ->whereIn('id', $receiptItemIds->values())
+            ->get()
+            ->keyBy('id');
+
+        $data->companySalaryItem->each(function ($item) use ($receiptItemIds, $requestedSalaries) {
+            $reqId = $receiptItemIds->get($item->id);
+            $item->is_requested = !is_null($reqId);
+            $item->request_info = $reqId ? $requestedSalaries->get($reqId) : null;
+        });
 
         return new JsonBody($data);
     }

@@ -29,10 +29,14 @@ class EnsureUserWithinCompanyScope
 
         $current = auth()->user();
 
+        // Superadmin bypass all scope restrictions
+        if ($current->isSuper()) {
+            return $next($request);
+        }
 
         if ($current->isCompany()) {
             $isSelf = $targetUser->id === $current->id;
-            $isEmployee = $targetUser->mst_company_id === $current->id;
+            $isEmployee = $targetUser->isEmployee();
 
             if (!$isSelf && !$isEmployee) {
                 abort(403, 'Forbidden access.');

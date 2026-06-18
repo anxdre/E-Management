@@ -3,11 +3,13 @@
 namespace App\Models\UserManagement;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\CompanyProfile;
 use App\Models\Payroll\CompanySalary;
 use App\Models\Payroll\EmployeeSalary;
 use App\Models\PresenceManagement\PresenceEmployee;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -15,7 +17,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, SoftDeletes;
 
     protected $table = 'mst_users';
 
@@ -50,7 +52,12 @@ class User extends Authenticatable implements MustVerifyEmail
 
     function userDetail()
     {
-        return $this->hasOne(UserDetail::class, 'id','mst_user_detail_id');
+        return $this->belongsTo(UserDetail::class, 'mst_user_detail_id')->withTrashed()->withDefault();
+    }
+
+    function companyProfile()
+    {
+        return $this->hasOne(CompanyProfile::class, 'mst_user_id');
     }
 
     function groups()
@@ -60,16 +67,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     function presence(){
         return $this->hasMany(PresenceEmployee::class, 'mst_user_id', 'id');
-    }
-
-    public function company()
-    {
-        return $this->belongsTo(User::class, 'mst_company_id');
-    }
-
-    public function employees()
-    {
-        return $this->hasMany(User::class, 'mst_company_id');
     }
 
     public function isCompany(): bool

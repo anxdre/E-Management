@@ -6,6 +6,7 @@ use App\Exports\PayrollReceiptExport;
 use App\Exports\ReceiptDetailExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JsonBody;
+use App\Models\CompanyProfile;
 use App\Models\Payroll\CompanySalary;
 use App\Models\Payroll\EmployeeRequestedSalary;
 use App\Models\Payroll\SalaryReceipt;
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
+use Mpdf\Mpdf;
 
 #[Prefix('receipt'), Name('company-receipt'), Middleware(['only-company'])]
 class CompanyPayrollReceiptController extends Controller
@@ -39,7 +41,7 @@ class CompanyPayrollReceiptController extends Controller
     #[Get('/{employee}/payroll', '.user.index')]
     public function indexByUser(int $userId)
     {
-        $user = User::query()->findOrFail($userId);
+        $user = User::withTrashed()->findOrFail($userId);
         return Inertia::render('Employee/EmployeeSalary/EmployeePayrollReceipt', ['user' => $user]);
     }
 
@@ -48,11 +50,11 @@ class CompanyPayrollReceiptController extends Controller
     {
         $listOfEmployee = new Collection();
         if ($request->filled('employee_id')) {
-            $listOfEmployee->push(User::query()->where('id', $request->employee_id)->firstOrFail());
+            $listOfEmployee->push(User::withTrashed()->where('id', $request->employee_id)->firstOrFail());
         }
 
         if (!$request->filled('employee_id')) {
-            $listOfEmployee = User::query()->get();
+            $listOfEmployee = User::withTrashed()->get();
         }
 
         $data = SalaryReceipt::query()
@@ -88,7 +90,7 @@ class CompanyPayrollReceiptController extends Controller
         try {
             $calculatedData = [];
             foreach ($request->user_id as $user) {
-                $user = User::query()->find($user);
+                $user = User::withTrashed()->find($user);
                 if (!$user) {
                     continue;
                 }
@@ -357,6 +359,11 @@ class CompanyPayrollReceiptController extends Controller
 
         $salaryReceipt = SalaryReceipt::query()->findOrFail($request->id);
         $user = $salaryReceipt->user;
+
+        if ($user->trashed()) {
+            return new JsonBody(null, message: 'Cannot edit receipt for deleted user', status_code: 403);
+        }
+
         try {
             DB::transaction(function () use ($request, $salaryReceipt, $user) {
                 // Calculate updated salary data
@@ -414,8 +421,13 @@ class CompanyPayrollReceiptController extends Controller
             'id' => 'required|exists:trx_salary_receipt,id',
             'status' => ['required', 'boolean'],
         ]);
-        $companySalary = SalaryReceipt::query()->findOrFail($request->id);
-        $companySalary->update([
+        $salaryReceipt = SalaryReceipt::query()->findOrFail($request->id);
+
+        if ($salaryReceipt->user->trashed()) {
+            return new JsonBody(null, message: 'Cannot confirm receipt for deleted user', status_code: 403);
+        }
+
+        $salaryReceipt->update([
             'status' => $request->status ? 'approved' : 'denied',
         ]);
 
@@ -442,5 +454,33 @@ class CompanyPayrollReceiptController extends Controller
     {
         $fileName = 'payroll-receipt-detail-' . $payroll . '-' . now()->format('Ymd-His') . '.xlsx';
         return Excel::download(new ReceiptDetailExport($payroll), $fileName);
+    }
+
+    #[Get('/{payroll}/export/detail-pdf', '.export.detail.pdf')]
+    public function exportDetailPdf(int $payroll)
+    {
+        $receipt = SalaryReceipt::query()
+            ->with(['user.userDetail', 'companySalaryItem'])
+            ->findOrFail($payroll);
+
+        $receipt->total_subtract = $receipt->companySalaryItem
+            ->where('calculation_type', 'subtract')
+            ->where('is_tax', false)
+            ->sum('salary');
+
+        $company = CompanyProfile::query()->first();
+
+        $html = view('pdf.receipt-detail', compact('receipt','company'))->render();
+
+        $mpdf = new Mpdf([
+            'format' => 'A4',
+            'margin_top' => 10,
+            'margin_bottom' => 10,
+            'margin_left' => 15,
+            'margin_right' => 15,
+        ]);
+        $mpdf->WriteHTML($html);
+
+        return $mpdf->Output('receipt-detail-' . $payroll . '-' . now()->format('Ymd-His') . '.pdf', 'I');
     }
 }

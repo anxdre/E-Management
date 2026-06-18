@@ -61,7 +61,7 @@ class DeviceManagementController extends Controller
         ]);
 
         $employee = User::query()
-            ->where('mst_company_id', $user->id)
+            ->where('type', 'employee')
             ->when($request->has('search'), function ($query) use ($request) {
                 $query->where(function ($q) use ($request) {
                     $q->where('email', 'like', "%{$request->search}%")

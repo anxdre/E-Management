@@ -16,13 +16,13 @@ const loader = useGlobalLoaderStrore()
     </Head>
     <div class="flex min-h-screen w-full flex-col relative">
         <Toaster/>
-        <div class="flex-col flex sticky top-0">
+        <div class="flex-col flex sticky top-0 z-10">
             <header class="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
                 <Navbar v-bind="$attrs"/>
             </header>
             <div v-if="$attrs.auth?.user && $attrs.auth?.user.email === 'admin@teamway.com'"
                  class="flex h-16 items-center justify-center gap-4 bg-primary px-4 md:px-6 animate-pulse text-white">Company Profile hasn't set up yet
-                <span @click="()=>{navigateLink(route('employee-account.detail',{id:$attrs.auth?.user.id}))}" class="italic underline cursor-pointer">Configure Now</span>
+                 <span @click="()=>{navigateLink(route('company-settings.index'))}" class="italic underline cursor-pointer">Configure Now</span>
             </div>
         </div>
         <div v-if="loader.isLoading" :class="{'bg-gray-800/50':loader.darkenBg}"

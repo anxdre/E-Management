@@ -10,8 +10,7 @@ import { Separator } from "@/shadcn/ui/separator";
 import { Check, ChevronsUpDown, DownloadIcon, LoaderIcon, TrashIcon, TriangleAlert, CalendarIcon } from "lucide-vue-next";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shadcn/ui/table";
 import { Button } from "@/shadcn/ui/button";
-import { jsPDF } from "jspdf"
-import html2canvas from "html2canvas"
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shadcn/ui/dialog";
 import { Label } from "@/shadcn/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
@@ -22,37 +21,9 @@ import { debounceFilter } from "@vueuse/core/index";
 import { Input } from "@/shadcn/ui/input";
 import { Calendar } from "@/shadcn/ui/calendar"
 
-const pdfContent = ref()
-const downloadPDF = async () => {
-    showGlobalLoader()
-    const canvas = await html2canvas(pdfContent.value, {
-        scale: 2, windowWidth: 1200, // atur sesuai layout desktop
-        windowHeight: pdfContent.value.clientHeight,
-    })
-    const imgData = canvas.toDataURL("image/png")
-
-    const pdf = new jsPDF("p", "mm", "a4")
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
-
-// Fit ke lebar A4 penuh
-    const imgWidth = pageWidth
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-    let heightLeft = imgHeight
-    let position = 24
-
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-    heightLeft -= pageHeight
-
-    while (heightLeft > 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-    }
-    hideGlobalLoader()
-    window.open(pdf.output("bloburl"))
+const downloadPDF = () => {
+    const url = route('company-receipt.export.detail.pdf', { payroll: data.value.id })
+    window.open(url, '_blank')
 }
 
 const dialogState = reactive(new CrudDialogAdapter())
@@ -264,10 +235,10 @@ onMounted(() => {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-        <div ref="pdfContent" class="p-4">
+        <div class="p-4">
             <Card class="w-full  mx-auto">
                 <CardHeader class="space-y-2">
-                    <h1 class="text-xl font-bold">{{ data.user?.company.user_detail.fullname }}</h1>
+                    <h1 class="text-xl font-bold">{{ data.company_profile?.company_name ?? '' }}</h1>
                     <Separator/>
                     <h4 class="text-muted-foreground">Payroll Receipt Detail</h4>
                     <h4 v-if="isEdit" class="bg-destructive text-center animate-pulse">Edit Mode Active</h4>
@@ -325,7 +296,7 @@ onMounted(() => {
 
                             <div class="md:flex grid justify-between items-center">
                                 <span class="text-sm font-medium">Employee Name</span>
-                                <span class="font-bold">{{ data.user?.user_detail.fullname }}</span>
+                                <span class="font-bold" :class="{'text-red-500': data.user?.deleted_at}">{{ data.user?.user_detail?.fullname || 'deleted account' }}</span>
                             </div>
                             <div class="md:flex grid justify-between items-center">
                                 <span class="text-sm font-medium">Employee Email</span>
@@ -333,7 +304,7 @@ onMounted(() => {
                             </div>
                             <div class="md:flex grid justify-between items-center">
                                 <span class="text-sm font-medium">Employee Phone Number</span>
-                                <span class="font-bold">{{ data.user?.user_detail.phone }}</span>
+                                <span class="font-bold">{{ data.user?.user_detail?.phone }}</span>
                             </div>
                         </div>
 
@@ -364,7 +335,17 @@ onMounted(() => {
                                         {{ index + 1 }}
                                     </TableCell>
                                     <TableCell v-if="!isEdit" class="font-medium">
-                                        {{ data.name }}
+                                        <div class="flex flex-col">
+                                            <div class="inline-flex items-center gap-1">
+                                                {{ data.name }}
+                                                <Badge v-if="data.is_requested" variant="outline" class="text-xs">Requested</Badge>
+                                            </div>
+                                            <span v-if="data.is_requested && data.request_info" class="text-xs text-muted-foreground mt-0.5 leading-tight">
+                                                Requested {{ dayjs(data.request_info.created_at).format('DD/MM/YYYY') }}
+                                                · Approved by {{ data.request_info.approved_by?.company_profile?.company_name ?? data.request_info.approved_by?.user_detail?.fullname ?? '-' }}
+                                                {{ data.request_info.approved_date ? dayjs(data.request_info.approved_date).format('DD/MM/YYYY') : '' }}
+                                            </span>
+                                        </div>
                                     </TableCell>
                                     <TableCell v-else class="font-medium">
                                         <div class="inline-flex items-center gap-2">
@@ -555,12 +536,12 @@ onMounted(() => {
                 <div class="space-x-2">
                     <Button :disabled="isEdit" @click="downloadPDF()" variant="outline">Export PDF</Button>
                     <Button :disabled="isEdit" @click="exportDetailExcel()" variant="outline">Export Excel</Button>
-                    <Button  v-if="data.status == 'pending'" @click="updatePayroll()" class="bg-amber-500">{{
+                    <Button  v-if="data.status == 'pending' && !data.user?.deleted_at" @click="updatePayroll()" class="bg-amber-500">{{
                             isEdit ? 'Save Receipt' : 'Edit Receipt'
                         }}
                     </Button>
                 </div>
-                <div class="space-x-2" v-if="data.status == 'pending'">
+                <div class="space-x-2" v-if="data.status == 'pending' && !data.user?.deleted_at">
                     <Button @click="confirmPayroll(false)" :disabled="isEdit" class="bg-black">Reject</Button>
                     <Button @click="confirmPayroll(true)" :disabled="isEdit">Approve</Button>
                 </div>

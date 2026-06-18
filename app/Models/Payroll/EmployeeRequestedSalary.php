@@ -5,10 +5,11 @@ namespace App\Models\Payroll;
 use App\Models\UserManagement\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EmployeeRequestedSalary extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = "trx_employee_requested_salary";
     protected $guarded = ['id'];
@@ -25,6 +26,6 @@ class EmployeeRequestedSalary extends Model
 
     public function approvedBy()
     {
-        return $this->belongsTo(User::class, 'mst_approved_by', 'id');
+        return $this->belongsTo(User::class, 'mst_approved_by', 'id')->withTrashed();
     }
 }

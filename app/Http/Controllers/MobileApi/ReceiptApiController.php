@@ -26,7 +26,7 @@ class ReceiptApiController extends Controller
             'date_end' => 'nullable|date',
         ]);
 
-        $user = User::query()->where('id', $id)->firstOrFail();
+        $user = User::withTrashed()->where('id', $id)->firstOrFail();
 
         $data = SalaryReceipt::query()
             ->with(['user', 'user.userDetail', 'user.groups', 'salaryReceiptItems'])

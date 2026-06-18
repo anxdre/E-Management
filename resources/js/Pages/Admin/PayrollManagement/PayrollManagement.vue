@@ -7,7 +7,8 @@ import {
     MoreHorizontal,
     PlusCircle,
     Search,
-    TriangleAlert
+    TriangleAlert,
+    X
 } from 'lucide-vue-next'
 
 import { Badge } from '@/shadcn/ui/badge'
@@ -110,8 +111,9 @@ function getEmployeeByGroup() {
     isLoading.value = true
     axios.get(route('employee-account.json.group', { group_id: companySalaryForm.value.companyGroupId }))
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
-            console.log(dataFromServer)
-            companySalaryForm.value.assigned_to = dataFromServer
+            const existingIds = new Set(companySalaryForm.value.assigned_to.map((u: any) => u.id))
+            const newUsers = dataFromServer.filter((u: any) => !existingIds.has(u.id))
+            companySalaryForm.value.assigned_to = [...companySalaryForm.value.assigned_to, ...newUsers]
         })
         .catch((err) => {
             errorToast('Error !', err.response.data.message)
@@ -120,6 +122,10 @@ function getEmployeeByGroup() {
             isLoading.value = false
             companySalaryForm.value.companyGroupId = undefined
         })
+}
+
+function removeAssignedUser(index: number) {
+    companySalaryForm.value.assigned_to.splice(index, 1)
 }
 
 function getAllGroupCompany(searchFilter: string) {
@@ -338,7 +344,14 @@ function addData() {
                                 <Separator/>
                             </div>
                             <div v-if="companySalaryForm.included_at_default" class="w-full h-full flex flex-col gap-2">
-                                <Label class="ps-2">Assign employee by group</Label>
+                                <div class="flex justify-between items-center">
+                                    <Label class="ps-2">Assign employee by group</Label>
+                                    <Button v-if="companySalaryForm.assigned_to.length > 0" variant="outline" size="sm"
+                                            class="text-destructive"
+                                            @click="companySalaryForm.assigned_to = []">
+                                        <X class="h-3 w-3 me-1"/> Clear All ({{ companySalaryForm.assigned_to.length }})
+                                    </Button>
+                                </div>
                                 <Label class="ps-2 text-xs text-muted-foreground">Tips : You can edit each employee
                                     configuration later at employee account management</Label>
                                 <Select v-model="companySalaryForm.companyGroupId"
@@ -352,13 +365,20 @@ function addData() {
                                         </SelectGroup>
                                     </SelectContent>
                                 </Select>
-                                <ul>
-                                    <li v-for="user in companySalaryForm.assigned_to">
+                                <ul class="flex flex-col gap-2">
+                                    <li v-for="(user, userIndex) in companySalaryForm.assigned_to" :key="user.id">
                                         <Card class="w-full p-4">
                                             <div class="flex flex-col justify-between gap-4">
-                                                <Label class="text-lg font-bold">
-                                                    {{ user.user_detail?.fullname }}
-                                                </Label>
+                                                <div class="flex justify-between items-start">
+                                                    <Label class="text-lg font-bold">
+                                                        {{ user.user_detail?.fullname }}
+                                                    </Label>
+                                                    <Button variant="ghost" size="icon"
+                                                            class="h-6 w-6 text-destructive shrink-0"
+                                                            @click="removeAssignedUser(userIndex)">
+                                                        <X class="h-4 w-4"/>
+                                                    </Button>
+                                                </div>
                                                 <div class="w-full h-full inline-flex items-center gap-4">
                                                     <Checkbox v-model="user.pivot.available_to_request"/>
                                                     <div class="grid">
@@ -479,7 +499,14 @@ function addData() {
                                 <Separator/>
                             </div>
                             <div v-if="companySalaryForm.included_at_default" class="w-full h-full flex flex-col gap-2">
-                                <Label class="ps-2">Assign employee by group</Label>
+                                <div class="flex justify-between items-center">
+                                    <Label class="ps-2">Assign employee by group</Label>
+                                    <Button v-if="companySalaryForm.assigned_to.length > 0" variant="outline" size="sm"
+                                            class="text-destructive"
+                                            @click="companySalaryForm.assigned_to = []">
+                                        <X class="h-3 w-3 me-1"/> Clear All ({{ companySalaryForm.assigned_to.length }})
+                                    </Button>
+                                </div>
                                 <Label class="ps-2 text-xs text-muted-foreground">Tips : You can edit each employee
                                     configuration later at employee account management</Label>
                                 <Select v-model="companySalaryForm.companyGroupId"
@@ -493,13 +520,20 @@ function addData() {
                                         </SelectGroup>
                                     </SelectContent>
                                 </Select>
-                                <ul>
-                                    <li v-for="user in companySalaryForm.assigned_to">
+                                <ul class="flex flex-col gap-2">
+                                    <li v-for="(user, userIndex) in companySalaryForm.assigned_to" :key="user.id">
                                         <Card class="w-full p-4">
                                             <div class="flex flex-col justify-between gap-4">
-                                                <Label class="text-lg font-bold">
-                                                    {{ user.user_detail?.fullname }}
-                                                </Label>
+                                                <div class="flex justify-between items-start">
+                                                    <Label class="text-lg font-bold">
+                                                        {{ user.user_detail?.fullname }}
+                                                    </Label>
+                                                    <Button variant="ghost" size="icon"
+                                                            class="h-6 w-6 text-destructive shrink-0"
+                                                            @click="removeAssignedUser(userIndex)">
+                                                        <X class="h-4 w-4"/>
+                                                    </Button>
+                                                </div>
                                                 <div class="w-full h-full inline-flex items-center gap-4">
                                                     <Checkbox v-model="user.pivot.available_to_request"/>
                                                     <div class="grid">
