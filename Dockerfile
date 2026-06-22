@@ -83,6 +83,9 @@ RUN mkdir -p storage/logs storage/framework/cache/data storage/framework/session
     chown -R www-data:www-data storage bootstrap/cache public/storage && \
     chmod -R 775 storage bootstrap/cache
 
+# Remove TelescopeServiceProvider (extends TelescopeApplicationServiceProvider — dev dep not installed)
+RUN rm -f app/Providers/TelescopeServiceProvider.php
+
 # Regenerate autoloader (skip scripts — artisan needs .env + dev deps, handled at runtime)
 RUN composer dump-autoload --no-scripts
 
