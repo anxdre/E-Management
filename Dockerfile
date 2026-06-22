@@ -78,19 +78,13 @@ COPY . .
 # Copy Vite build assets
 COPY --from=frontend /app/public/build ./public/build
 
-# Run composer scripts (package:discover) now that full source is available
-# Set APP_ENV=production so TelescopeServiceProvider (dev dep) not loaded
-RUN cp .env.example .env && \
-    sed -i 's/APP_ENV=local/APP_ENV=production/' .env && \
-    php artisan key:generate --force && \
-    composer dump-autoload && \
-    php artisan storage:link --force && \
-    rm .env
-
-# Laravel permissions
+# Laravel permissions (before any artisan commands — TelescopeServiceProvider needs dev dep)
 RUN mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views && \
     chown -R www-data:www-data storage bootstrap/cache public/storage && \
     chmod -R 775 storage bootstrap/cache
+
+# Regenerate autoloader (skip scripts — artisan needs .env + dev deps, handled at runtime)
+RUN composer dump-autoload --no-scripts
 
 # PHP Opcache
 RUN printf "\
