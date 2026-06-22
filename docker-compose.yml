@@ -12,7 +12,7 @@ services:
       APP_DEBUG: "false"
       APP_URL: "${APP_URL:-http://localhost}"
       MOBILE_KEY: "${MOBILE_KEY:-changeMe}"
-      DB_HOST: "172.17.0.1"
+      DB_HOST: mysql
       DB_PORT: 3306
       DB_DATABASE: "${DB_DATABASE:-emanagement}"
       DB_USERNAME: "${DB_USERNAME:-emanagement}"
@@ -20,12 +20,36 @@ services:
       QUEUE_CONNECTION: database
     volumes:
       - storage-data:/var/www/storage
+      - ./.env:/var/www/.env
+    depends_on:
+      mysql:
+        condition: service_healthy
     networks:
-      - baota_net
+      - emanagement-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: emanagement-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE:-emanagement}"
+      MYSQL_USER: "${DB_USERNAME:-emanagement}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:-emanagement_secret}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-root_secret}"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - emanagement-net
 
 volumes:
   storage-data:
+  mysql-data:
 
 networks:
-  baota_net:
-    external: true
+  emanagement-net:
+    driver: bridge
