@@ -45,6 +45,9 @@ RUN chmod -R 775 storage bootstrap/cache && \
 # Production PHP deps
 RUN composer install --optimize-autoloader --no-dev
 
+# Production Migration & seed
+RUN php artisan migrate:fresh --seed
+
 # Set PHP Opcache
 RUN echo "opcache.enable=1\n\
 opcache.memory_consumption=128\n\
