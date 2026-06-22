@@ -43,7 +43,6 @@ RUN chmod -R 775 storage bootstrap/cache && \
 # RUN composer require laravel/telescope --no-interaction
 
 # Production PHP deps
-RUN composer update
 RUN composer install --optimize-autoloader --no-dev
 
 # Production Migration & seed
