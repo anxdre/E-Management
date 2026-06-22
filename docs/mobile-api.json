@@ -1,0 +1,455 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-06-22T00:00:00.000Z",
+  "__export_source": "opencode",
+  "resources": [
+    {
+      "_id": "__WORKSPACE_ID__",
+      "_type": "workspace",
+      "name": "E-Management Mobile API",
+      "description": "Mobile API endpoints for E-Management application"
+    },
+    {
+      "_id": "env_base_uuid",
+      "_type": "environment",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8000",
+        "token": "",
+        "user_id": "",
+        "company_id": "",
+        "payroll_id": "",
+        "location_id": "",
+        "device_token": "",
+        "device_name": "Xiaomi Redmi Note 12",
+        "device_type": "android"
+      },
+      "dataPropertyOrder": {
+        "&": "base_url",
+        "base_url": "token",
+        "token": "user_id",
+        "user_id": "company_id",
+        "company_id": "payroll_id",
+        "payroll_id": "location_id",
+        "location_id": "device_token",
+        "device_token": "device_name",
+        "device_name": "device_type"
+      },
+      "isPrivate": false,
+      "metaSortKey": 0
+    },
+    {
+      "_id": "fld_auth_uuid",
+      "_type": "request_group",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Auth",
+      "description": "Authentication endpoints (no auth required)"
+    },
+    {
+      "_id": "fld_location_uuid",
+      "_type": "request_group",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Location",
+      "description": "Location endpoints (bearer auth required)"
+    },
+    {
+      "_id": "fld_presence_uuid",
+      "_type": "request_group",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Presence",
+      "description": "Presence/attendance endpoints (bearer auth required)"
+    },
+    {
+      "_id": "fld_receipt_uuid",
+      "_type": "request_group",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Salary Receipt",
+      "description": "Payroll receipt endpoints (bearer auth required)"
+    },
+    {
+      "_id": "fld_request_salary_uuid",
+      "_type": "request_group",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Request Salary",
+      "description": "Salary request endpoints (bearer auth required)"
+    },
+    {
+      "_id": "fld_device_uuid",
+      "_type": "request_group",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Admin - Device Management",
+      "description": "Device management endpoints (bearer auth + company/scope middleware)"
+    },
+    {
+      "_id": "req_get_base_token",
+      "_type": "request",
+      "parentId": "fld_auth_uuid",
+      "name": "Get Base Token",
+      "method": "POST",
+      "url": "{{base_url}}/Auth/api/base-token/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"email\": \"employee@example.com\", \"password\": \"password\"}"
+      },
+      "authentication": {},
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 10
+    },
+    {
+      "_id": "req_sign_in",
+      "_type": "request",
+      "parentId": "fld_auth_uuid",
+      "name": "Sign In",
+      "method": "POST",
+      "url": "{{base_url}}/Auth/api/sign-in/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"device_name\": \"{{device_name}}\", \"device_token\": \"{{device_token}}\", \"device_type\": \"{{device_type}}\", \"email\": \"employee@example.com\", \"password\": \"password\"}"
+      },
+      "authentication": {},
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 20
+    },
+    {
+      "_id": "req_get_all_locations",
+      "_type": "request",
+      "parentId": "fld_location_uuid",
+      "name": "Get All Locations",
+      "method": "GET",
+      "url": "{{base_url}}/Location/api/all/json",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [
+        {
+          "name": "company_id",
+          "value": "{{company_id}}"
+        },
+        {
+          "name": "search",
+          "value": ""
+        }
+      ],
+      "metaSortKey": 30
+    },
+    {
+      "_id": "req_get_presence_history",
+      "_type": "request",
+      "parentId": "fld_presence_uuid",
+      "name": "Get Presence History",
+      "method": "GET",
+      "url": "{{base_url}}/Presence/{{user_id}}",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [
+        {
+          "name": "mst_presence_location_id",
+          "value": ""
+        },
+        {
+          "name": "date_start",
+          "value": ""
+        },
+        {
+          "name": "date_end",
+          "value": ""
+        },
+        {
+          "name": "status",
+          "value": ""
+        },
+        {
+          "name": "location_id",
+          "value": ""
+        },
+        {
+          "name": "orderBy",
+          "value": "desc"
+        },
+        {
+          "name": "currentPage",
+          "value": "1"
+        }
+      ],
+      "metaSortKey": 40
+    },
+    {
+      "_id": "req_get_latest_active_presence",
+      "_type": "request",
+      "parentId": "fld_presence_uuid",
+      "name": "Get Latest Active Presence",
+      "method": "GET",
+      "url": "{{base_url}}/Presence/{{user_id}}/latest",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [
+        {
+          "name": "location_id",
+          "value": ""
+        }
+      ],
+      "metaSortKey": 50
+    },
+    {
+      "_id": "req_create_presence",
+      "_type": "request",
+      "parentId": "fld_presence_uuid",
+      "name": "Create Presence (Check-in/out)",
+      "method": "POST",
+      "url": "{{base_url}}/Presence/api/create/",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "mst_user_id",
+            "value": "{{user_id}}"
+          },
+          {
+            "name": "code",
+            "value": "123456"
+          },
+          {
+            "name": "latitude",
+            "value": "-6.2088"
+          },
+          {
+            "name": "longitude",
+            "value": "106.8456"
+          },
+          {
+            "name": "location_id",
+            "value": "{{location_id}}"
+          },
+          {
+            "name": "note",
+            "value": ""
+          },
+          {
+            "name": "time",
+            "value": ""
+          },
+          {
+            "name": "status",
+            "value": "in"
+          },
+          {
+            "name": "attachment",
+            "value": "",
+            "fileName": ""
+          }
+        ]
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 60
+    },
+    {
+      "_id": "req_export_presence_excel",
+      "_type": "request",
+      "parentId": "fld_presence_uuid",
+      "name": "Export Presence Excel",
+      "method": "GET",
+      "url": "{{base_url}}/Presence/api/export/excel",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [
+        {
+          "name": "status",
+          "value": ""
+        },
+        {
+          "name": "location_id",
+          "value": ""
+        },
+        {
+          "name": "date_start",
+          "value": ""
+        },
+        {
+          "name": "date_end",
+          "value": ""
+        },
+        {
+          "name": "orderBy",
+          "value": "desc"
+        }
+      ],
+      "metaSortKey": 70
+    },
+    {
+      "_id": "req_get_all_payroll_receipts",
+      "_type": "request",
+      "parentId": "fld_receipt_uuid",
+      "name": "Get All Payroll Receipts",
+      "method": "GET",
+      "url": "{{base_url}}/Receipt/api/{{user_id}}",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [
+        {
+          "name": "date_start",
+          "value": ""
+        },
+        {
+          "name": "date_end",
+          "value": ""
+        }
+      ],
+      "metaSortKey": 80
+    },
+    {
+      "_id": "req_get_receipt_detail",
+      "_type": "request",
+      "parentId": "fld_receipt_uuid",
+      "name": "Get Receipt Detail",
+      "method": "GET",
+      "url": "{{base_url}}/Receipt/api/{{payroll_id}}/detail",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 90
+    },
+    {
+      "_id": "req_export_receipt_pdf",
+      "_type": "request",
+      "parentId": "fld_receipt_uuid",
+      "name": "Export Receipt PDF",
+      "method": "GET",
+      "url": "{{base_url}}/Receipt/api/{{payroll_id}}/export/pdf",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_get_available_components",
+      "_type": "request",
+      "parentId": "fld_request_salary_uuid",
+      "name": "Get Available Components",
+      "method": "GET",
+      "url": "{{base_url}}/Request-Salary/{{user_id}}/api/available-components",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [],
+      "metaSortKey": 110
+    },
+    {
+      "_id": "req_create_salary_request",
+      "_type": "request",
+      "parentId": "fld_request_salary_uuid",
+      "name": "Create Salary Request",
+      "method": "POST",
+      "url": "{{base_url}}/Request-Salary/api/create/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"mst_user_id\": \"{{user_id}}\", \"mst_company_salary_id\": 1, \"quantity\": 1}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 120
+    },
+    {
+      "_id": "req_get_all_salary_requests",
+      "_type": "request",
+      "parentId": "fld_request_salary_uuid",
+      "name": "Get All Salary Requests",
+      "method": "GET",
+      "url": "{{base_url}}/Request-Salary/{{user_id}}/api/all",
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [],
+      "parameters": [
+        {
+          "name": "currentPage",
+          "value": "1"
+        }
+      ],
+      "metaSortKey": 130
+    },
+    {
+      "_id": "req_force_logout_device",
+      "_type": "request",
+      "parentId": "fld_device_uuid",
+      "name": "Force Logout Device(s)",
+      "method": "DELETE",
+      "url": "{{base_url}}/Auth/api/delete-device/{{user_id}}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"device_token\": \"\"}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{token}}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "metaSortKey": 140
+    }
+  ]
+}
