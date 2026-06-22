@@ -79,18 +79,17 @@ COPY . .
 COPY --from=frontend /app/public/build ./public/build
 
 # Run composer scripts now that full source is available
-RUN composer dump-autoload
+RUN cp .env.example .env && \
+    php artisan key:generate --force && \
+    composer dump-autoload && \
+    php artisan optimize && \
+    php artisan storage:link --force && \
+    rm .env
 
 # Laravel permissions
 RUN mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views && \
     chown -R www-data:www-data storage bootstrap/cache public/storage && \
     chmod -R 775 storage bootstrap/cache
-
-# Storage link
-RUN php artisan storage:link --force 2>/dev/null || true
-
-# Optimize Laravel
-RUN php artisan optimize
 
 # PHP Opcache
 RUN printf "\
