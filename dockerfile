@@ -11,8 +11,6 @@ RUN corepack enable
 
 RUN printf 'onlyBuiltDependencies[]=esbuild\nonlyBuiltDependencies[]=core-js\nonlyBuiltDependencies[]=vue-demi\nonlyBuiltDependencies[]=vue3-date-time-picker\n' > .npmrc
 
-RUN pnpm install
-
 RUN corepack enable && pnpm install
 
 COPY . .
