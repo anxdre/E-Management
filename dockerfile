@@ -20,7 +20,7 @@ RUN pnpm run build
 # ============================================================
 # Stage 2 : PHP / Laravel Runtime
 # ============================================================
-FROM php:8.2-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # Install system packages
 RUN apk add --no-cache \
