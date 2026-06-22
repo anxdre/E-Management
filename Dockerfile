@@ -3,6 +3,9 @@
 # ============================================================
 FROM node:22-alpine AS frontend
 
+ARG VITE_APP_URL
+ENV VITE_APP_URL=$VITE_APP_URL
+
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
