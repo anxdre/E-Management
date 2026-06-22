@@ -40,7 +40,7 @@ RUN chmod -R 775 storage bootstrap/cache && \
     chown -R www-data:www-data storage bootstrap/cache
 
 # Install Telescope secara eksplisit
-RUN composer require laravel/telescope --no-interaction
+# RUN composer require laravel/telescope --no-interaction
 
 # Production PHP deps
 RUN composer install --optimize-autoloader --no-dev
