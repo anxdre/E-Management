@@ -7,8 +7,13 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
 
-RUN corepack enable && \
-    pnpm install --ignore-scripts=false
+RUN corepack enable
+
+RUN printf 'onlyBuiltDependencies[]=esbuild\nonlyBuiltDependencies[]=core-js\nonlyBuiltDependencies[]=vue-demi\nonlyBuiltDependencies[]=vue3-date-time-picker\n' > .npmrc
+
+RUN pnpm install
+
+RUN corepack enable && pnpm install
 
 COPY . .
 
