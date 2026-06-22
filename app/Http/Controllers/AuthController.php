@@ -35,7 +35,7 @@ class AuthController extends Controller
         ]);
     }
 
-    #[Post('/sign-in', name: '.sign-in')]
+    #[Post('/sign-in')]
     public function signIn(LoginRequest $request)
     {
         $request->authenticate();
