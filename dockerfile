@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1 : Frontend Build (Vite)
 # ============================================================
-FROM node:20-alpine AS frontend
+FROM node:22-alpine AS frontend
 
 WORKDIR /app
 
