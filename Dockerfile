@@ -78,11 +78,12 @@ COPY . .
 # Copy Vite build assets
 COPY --from=frontend /app/public/build ./public/build
 
-# Run composer scripts now that full source is available
+# Run composer scripts (package:discover) now that full source is available
+# Set APP_ENV=production so TelescopeServiceProvider (dev dep) not loaded
 RUN cp .env.example .env && \
+    sed -i 's/APP_ENV=local/APP_ENV=production/' .env && \
     php artisan key:generate --force && \
     composer dump-autoload && \
-    php artisan optimize && \
     php artisan storage:link --force && \
     rm .env
 
