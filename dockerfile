@@ -101,12 +101,12 @@ COPY docker/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
 
 # Entrypoint
-COPY docker/entrypoint.sh /entrypoint.sh
+# COPY docker/entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /entrypoint.sh
+# RUN chmod +x /entrypoint.sh
 
-EXPOSE 8181
-
-ENTRYPOINT ["/entrypoint.sh"]
+# EXPOSE 8181
+#
+# ENTRYPOINT ["/entrypoint.sh"]
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
