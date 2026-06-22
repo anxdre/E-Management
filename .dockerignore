@@ -7,9 +7,8 @@ node_modules
 vendor
 public/build
 storage/*.key
-docker/
+
 bun.lockb
-pnpm-lock.yaml
 package-lock.json
 .gitattributes
 .editorconfig
