@@ -1,72 +1,112 @@
-# Stage 1: Build frontend with pnpm
-FROM node:20-alpine as frontend
+# ============================================================
+# Stage 1 : Frontend Build (Vite)
+# ============================================================
+FROM node:20-alpine AS frontend
 
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
 
-RUN npm install -g pnpm && pnpm install
+RUN corepack enable && \
+    pnpm install --frozen-lockfile
 
 COPY . .
 
 RUN pnpm run build
 
 
-# Stage 2: Laravel with PHP-FPM + NGINX
+# ============================================================
+# Stage 2 : PHP / Laravel Runtime
+# ============================================================
 FROM php:8.2-fpm-alpine
 
-# Install PHP extensions & system tools
+# Install system packages
 RUN apk add --no-cache \
-    bash git curl zip unzip supervisor nginx \
-    icu-dev zlib-dev libzip-dev oniguruma-dev \
-    libpng-dev jpeg-dev freetype-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql mbstring zip intl bcmath opcache
+    bash \
+    git \
+    curl \
+    zip \
+    unzip \
+    supervisor \
+    nginx \
+    icu-dev \
+    zlib-dev \
+    libzip-dev \
+    oniguruma-dev \
+    libpng-dev \
+    jpeg-dev \
+    freetype-dev
 
+# Install PHP Extensions
+RUN docker-php-ext-configure gd \
+    --with-freetype \
+    --with-jpeg
+
+RUN docker-php-ext-install \
+    gd \
+    pdo \
+    pdo_mysql \
+    mbstring \
+    zip \
+    intl \
+    bcmath \
+    opcache
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy project
 WORKDIR /var/www
 
+# Copy composer files first (cache optimization)
+COPY composer.json composer.lock ./
+
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --optimize-autoloader \
+    --no-interaction \
+    --no-scripts
+
+# Copy project files
 COPY . .
 
-# Copy built frontend from Stage 1
-COPY --from=frontend /app/public /var/www/public
+# Copy Vite build assets
+COPY --from=frontend /app/public/build ./public/build
 
-# Set permissions
-RUN chmod -R 775 storage bootstrap/cache && \
-    chown -R www-data:www-data storage bootstrap/cache
+# Laravel permissions
+RUN mkdir -p storage/logs && \
+    chown -R www-data:www-data storage bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache
 
-# Install Telescope secara eksplisit
-# RUN composer require laravel/telescope --no-interaction
+# Optimize Laravel
+RUN php artisan config:clear || true && \
+    php artisan route:clear || true && \
+    php artisan view:clear || true
 
-# Production PHP deps
-RUN composer install --optimize-autoloader --no-dev
-
-# Production Migration & seed
-RUN php artisan migrate:fresh --seed
-
-# Set PHP Opcache
-RUN echo "opcache.enable=1\n\
+# PHP Opcache
+RUN printf "\
+opcache.enable=1\n\
 opcache.memory_consumption=128\n\
 opcache.interned_strings_buffer=8\n\
 opcache.max_accelerated_files=4000\n\
-opcache.validate_timestamps=0\n" > /usr/local/etc/php/conf.d/opcache.ini
+opcache.validate_timestamps=0\n\
+opcache.revalidate_freq=0\n\
+" > /usr/local/etc/php/conf.d/opcache.ini
 
-# NGINX config
+# NGINX
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/default.conf /etc/nginx/conf.d/default.conf
 
-# Supervisor config
+# Supervisor
 COPY docker/supervisord.conf /etc/supervisord.conf
 
-#take ownership
-WORKDIR /var/www
-RUN chown -R www-data:www-data .
-RUN chmod -R 755 .
+# Entrypoint
+COPY docker/entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 8181
+
+ENTRYPOINT ["/entrypoint.sh"]
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
