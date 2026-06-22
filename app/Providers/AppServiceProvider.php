@@ -6,7 +6,9 @@ use App\Http\Middleware\EnsureUserIsCompany;
 use App\Http\Middleware\EnsureUserIsEmployee;
 use App\Http\Middleware\EnsureUserWithinCompanyScope;
 use App\Models\PersonalAccessToken;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
@@ -34,5 +36,16 @@ class AppServiceProvider extends ServiceProvider
         Route::aliasMiddleware('scope-company', EnsureUserWithinCompanyScope::class);
         Route::aliasMiddleware('auth:sanctum', AuthenticateSession::class);
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+
+        if ($this->app->environment('production')) {
+            Request::setTrustedProxies(
+                ['*'],
+                Request::HEADER_X_FORWARDED_FOR |
+                Request::HEADER_X_FORWARDED_HOST |
+                Request::HEADER_X_FORWARDED_PORT |
+                Request::HEADER_X_FORWARDED_PROTO
+            );
+            URL::forceScheme('https');
+        }
     }
 }
