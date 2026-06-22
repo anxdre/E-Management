@@ -36,7 +36,6 @@ const formSchema = toTypedSchema(z.object({
     company_email: z.string().email().optional().or(z.literal('')),
     company_address: z.string().optional().or(z.literal('')),
     company_phone: z.string().optional().or(z.literal('')),
-    npwp: z.string().optional().or(z.literal('')),
     company_logo: z.any().nullable().optional(),
     auto_approve: z.boolean().optional(),
     auto_approve_mode: z.enum(['realtime', 'cron']).optional(),
@@ -52,7 +51,6 @@ const { handleSubmit, setFieldValue, setErrors } = useForm({
         company_email: props.profile?.company_email ?? '',
         company_address: props.profile?.company_address ?? '',
         company_phone: props.profile?.company_phone ?? '',
-        npwp: props.profile?.npwp ?? '',
         auto_approve: Boolean(props.profile?.auto_approve ?? false),
         auto_approve_mode: props.profile?.auto_approve_mode ?? 'realtime',
         auto_approve_batch_hour: props.profile?.auto_approve_batch_hour
@@ -291,20 +289,6 @@ onMounted(() => {
                                                v-bind="componentField"
                                                type="tel"
                                                placeholder="enter company phone number"
-                                        />
-                                    </FormControl>
-                                    <FormMessage/>
-                                </FormItem>
-                            </FormField>
-
-                            <FormField name="npwp" v-slot="{ componentField }">
-                                <FormItem v-auto-animate>
-                                    <FormLabel>NPWP</FormLabel>
-                                    <FormControl>
-                                        <Input :disabled="!isEditing"
-                                               v-bind="componentField"
-                                               type="text"
-                                               placeholder="enter NPWP"
                                         />
                                     </FormControl>
                                     <FormMessage/>
