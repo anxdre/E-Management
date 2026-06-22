@@ -69,13 +69,17 @@ RUN composer install \
     --no-dev \
     --prefer-dist \
     --optimize-autoloader \
-    --no-interaction
+    --no-interaction \
+    --no-scripts
 
 # Copy project files
 COPY . .
 
 # Copy Vite build assets
 COPY --from=frontend /app/public/build ./public/build
+
+# Run composer scripts now that full source is available
+RUN composer dump-autoload
 
 # Laravel permissions
 RUN mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views && \
