@@ -86,6 +86,9 @@ RUN mkdir -p storage/logs storage/framework/cache/data storage/framework/session
 # Remove TelescopeServiceProvider (extends TelescopeApplicationServiceProvider — dev dep not installed)
 RUN rm -f app/Providers/TelescopeServiceProvider.php
 
+# Clear stale cached providers from dev environment (not installed with --no-dev)
+RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+
 # Regenerate autoloader (skip scripts — artisan needs .env + dev deps, handled at runtime)
 RUN composer dump-autoload --no-scripts
 
