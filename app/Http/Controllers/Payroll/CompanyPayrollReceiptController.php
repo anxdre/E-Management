@@ -236,7 +236,7 @@ class CompanyPayrollReceiptController extends Controller
         foreach ($requestedSalaryComponents as $requestedSalary) {
             $component = CompanySalary::find($requestedSalary->mst_company_salary_id);
             if ($component) {
-                $calculatedComponent = $this->calculateComponentAmount($component, $totalWorkHours, $presenceRecords, $requestedSalary->quantity);
+                $calculatedComponent = $this->calculateComponentAmount($component, $totalWorkHours, $presenceRecords, $requestedSalary->quantity, $requestedSalary->salary_snapshot);
 
                 if ($component->is_tax) {
                     // Store tax components for later calculation
@@ -315,17 +315,19 @@ class CompanyPayrollReceiptController extends Controller
      * @param array $presenceRecords Optional presence records for presence-based calculation
      * @return CompanySalary
      */
-    private function calculateComponentAmount($component, $workHours, $presenceRecords = null, $specificAmmount = null)
+    private function calculateComponentAmount($component, $workHours, $presenceRecords = null, $specificAmmount = null, $overrideRate = null)
     {
+        $effectiveRate = $overrideRate ?? $component->salary;
+
         switch ($component->type) {
             case 'fixed':
                 $component->quantity = $specificAmmount ?? 1;
-                $component->totalSalary = $component->salary * $component->quantity;
+                $component->totalSalary = $effectiveRate * $component->quantity;
                 return $component;
 
             case 'hourly':
                 $component->quantity = $workHours;
-                $component->totalSalary = $component->salary * $workHours;
+                $component->totalSalary = $effectiveRate * $workHours;
                 return $component;
 
             case 'presence':
@@ -338,7 +340,7 @@ class CompanyPayrollReceiptController extends Controller
                         }
                     }
                     $component->quantity = $presenceCount;
-                    $component->totalSalary = $component->salary * $presenceCount;
+                    $component->totalSalary = $effectiveRate * $presenceCount;
                     return $component;
                 }
                 $component->quantity = 0;
@@ -347,7 +349,7 @@ class CompanyPayrollReceiptController extends Controller
             case 'tax':
                 // For tax components, we return the base amount to be taxed
                 $component->quantity = $specificAmmount ?? 1;
-                $component->totalSalary = $component->salary * $component->quantity;
+                $component->totalSalary = $effectiveRate * $component->quantity;
                 return $component;
 
             default:
