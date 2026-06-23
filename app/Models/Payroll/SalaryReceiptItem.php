@@ -4,11 +4,10 @@ namespace App\Models\Payroll;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SalaryReceiptItem extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $table = 'trx_salary_receipt_item';
     protected $guarded = [''];

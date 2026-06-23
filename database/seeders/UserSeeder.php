@@ -30,7 +30,7 @@ class UserSeeder extends Seeder
             'company_phone' => '02155512345',
             'company_address' => 'Jl. Jenderal Sudirman No. 123, Jakarta Pusat, 10220',
             'company_email' => 'company@admin.com',
-        ]);
+            ]);
 
         $employeeData = [
             ['fullname' => 'Rudi Hartono',          'phone' => '081234567890', 'address' => 'Jl. Kebon Jeruk No. 10, Jakarta Barat',                 'email' => 'rudi@email.com'],

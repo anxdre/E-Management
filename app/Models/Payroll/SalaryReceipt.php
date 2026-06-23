@@ -14,6 +14,11 @@ class SalaryReceipt extends Model
     protected $table = 'trx_salary_receipt';
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'mst_user_id', 'id')->withTrashed();
@@ -27,9 +32,8 @@ class SalaryReceipt extends Model
     public function companySalaryItem()
     {
         return $this->belongsToMany(CompanySalary::class, 'trx_salary_receipt_item', 'trx_salary_receipt_id', 'mst_company_salary_id','id', 'id')
-            ->withPivot(['quantity', 'total_value', 'trx_employee_requested_salary_id'])
+            ->withPivot(['quantity', 'total_value', 'trx_employee_requested_salary_id', 'salary_name_snapshot', 'salary_rate_snapshot'])
             ->withTimestamps()
-            ->withTrashed()
             ->as('detail_item')
             ->orderBy('is_tax');
     }

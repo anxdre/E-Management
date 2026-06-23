@@ -101,7 +101,7 @@
             <tr>
                 <td class="text-center">{{ $loop->iteration }}</td>
                 <td class="text-left">
-                    {{ $item->name }}
+                    {{ $item->detail_item?->salary_name_snapshot ?? $item->name }}
                     @if (!empty($item->is_requested) && $item->request_info)
                         <span style="font-size:7pt;color:#666;display:block;margin-top:1px;">
                             Requested {{ \Carbon\Carbon::parse($item->request_info['created_at'])->format('d/m/Y') }}
@@ -111,10 +111,11 @@
                     @endif
                 </td>
                 <td class="text-center">
+                    @php $rate = $item->detail_item?->salary_rate_snapshot ?? $item->salary; @endphp
                     @if (!$item->is_tax)
-                        Rp {{ number_format($item->salary, 0, ',', '.') }}
+                        Rp {{ number_format($rate, 0, ',', '.') }}
                     @else
-                        {{ $item->salary }}%
+                        {{ $rate }}%
                     @endif
                 </td>
                 <td class="text-center">

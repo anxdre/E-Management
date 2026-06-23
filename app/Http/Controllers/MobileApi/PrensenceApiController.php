@@ -162,14 +162,15 @@ class PrensenceApiController
 
             $employeePresence->time_out = Carbon::now();
             $employeePresence->id = $historyAttendance->id;
+            $timeIn = Carbon::parse($historyAttendance->time_in);
             $isLimit = false;
             $isEarlier = false;
             if ($presenceLocation->max_hour) {
-                $isLimit = $employeePresence->time_out->diffInHours($employeePresence->time_out, true) > $presenceLocation->max_hour;
+                $isLimit = $timeIn->diffInHours($employeePresence->time_out) > $presenceLocation->max_hour;
             }
 
             if ($presenceLocation->min_hour) {
-                $isEarlier = $employeePresence->time_out->diffInHours($employeePresence->time_out) < $presenceLocation->min_hour;
+                $isEarlier = $timeIn->diffInHours($employeePresence->time_out) < $presenceLocation->min_hour;
             }
 
             if ($isLimit ) {

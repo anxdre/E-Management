@@ -181,7 +181,7 @@ Halaman ini menampilkan daftar komponen gaji yang telah didefinisikan oleh perus
 - **Controller:** `CompanyPayrollReceiptController@index`
 - **Middleware:** `only-company`
 
-Halaman ini menampilkan seluruh slip gaji yang telah dihasilkan dalam bentuk tabel berpaginasi. Setiap baris menampilkan nama karyawan, gaji pokok, gaji setelah pajak, status (dalam bentuk *badge* berwarna: *pending*, *approved*, *denied*), periode, dan tanggal pembuatan. Pengguna dapat memfilter data berdasarkan rentang tanggal dan melakukan pencarian. Tersedia tombol untuk mengekspor data ke Excel. Dialog pembuatan slip gaji massal (*bulk generate*) menyediakan pemilih rentang tanggal, pemilihan karyawan berdasarkan grup, dan tombol untuk memproses seluruh perhitungan gaji secara otomatis.
+Halaman ini menampilkan seluruh slip gaji yang telah dihasilkan dalam bentuk tabel berpaginasi. Setiap baris menampilkan nama karyawan, gaji pokok, gaji setelah pajak, status (dalam bentuk *badge* berwarna: *pending*, *approved*, *denied*), periode, dan tanggal pembuatan. Pengguna dapat memfilter data berdasarkan status (*All*, *Pending*, *Approved*, *Denied*), mengurutkan berdasarkan tanggal (*Terbaru* / *Terlama*), serta memfilter berdasarkan rentang tanggal dan pencarian. Tersedia tombol untuk mengekspor data ke Excel. Dialog pembuatan slip gaji massal (*bulk generate*) menyediakan pemilih rentang tanggal, pemilihan karyawan berdasarkan grup, dan tombol untuk memproses seluruh perhitungan gaji secara otomatis.
 
 ### 7.3 Halaman Detail Slip Gaji
 
@@ -190,7 +190,7 @@ Halaman ini menampilkan seluruh slip gaji yang telah dihasilkan dalam bentuk tab
 - **Controller:** `EmployeePayrollTypeController@detailReceipt`
 - **Middleware:** `scope-company`
 
-Halaman ini menampilkan rincian lengkap satu slip gaji. Informasi yang ditampilkan meliputi: nama perusahaan, *badge* status, periode awal dan akhir, data karyawan (nama, surel, telepon), tabel rincian komponen gaji (nama komponen, nilai dasar, kategori, tipe, kuantitas, dan total pendapatan), total jam kerja, jumlah presensi, total gaji sebelum pajak, total pengurang, total pajak, dan gaji bersih setelah pajak. Pada status *pending*, halaman menyediakan mode pengeditan untuk menambah, menghapus, atau mengurutkan ulang komponen gaji. Tersedia tombol untuk menyetujui atau menolak slip, serta tombol untuk mengekspor dalam format PDF (menggunakan mPDF) dan Excel.
+Halaman ini menampilkan rincian lengkap satu slip gaji. Informasi yang ditampilkan meliputi: nama perusahaan, *badge* status, periode awal dan akhir, data karyawan (nama, surel, telepon), tabel rincian komponen gaji (nama komponen, nilai dasar, kategori, tipe, kuantitas, dan total pendapatan), total jam kerja (≥ 0, tidak negatif), jumlah presensi, total gaji sebelum pajak, total pengurang, total pajak, dan gaji bersih setelah pajak. Pada status *pending*, halaman menyediakan mode pengeditan untuk mengubah kuantitas komponen gaji. Komponen hasil *request* karyawan bersifat *read-only* (nama + badge + info saja, *quantity* *plain text*). Simpan menggunakan metode *update-in-place*: item yang sudah ada diperbarui kuantitasnya, item baru dibuat dengan *snapshot* dari *master*, item yang dihapus dari daftar akan ikut terhapus. Tersedia tombol untuk menyetujui atau menolak slip, serta tombol untuk mengekspor dalam format PDF (menggunakan mPDF) dan Excel.
 
 ### 7.4 Halaman Slip Gaji per Karyawan
 
@@ -208,7 +208,7 @@ Halaman ini merupakan varian dari halaman daftar slip gaji utama yang telah difi
 - **Controller:** `EmployeeRequestSalaryController@index`
 - **Middleware:** `auth`
 
-Halaman ini menampilkan daftar permintaan komponen gaji tambahan yang diajukan oleh karyawan. Tabel menampilkan nama karyawan, nama komponen yang diminta, kuantitas, status permintaan (*pending*, *approved*, *rejected*), tanggal pengajuan, tanggal persetujuan, dan status realisasi. Pengguna dapat memfilter data berdasarkan status, rentang tanggal, dan kata kunci pencarian. Tombol aksi untuk menyetujui atau menolak permintaan dilengkapi dengan dialog konfirmasi. Proses persetujuan akan mencatat admin yang menyetujui dan tanggal persetujuan.
+Halaman ini menampilkan daftar permintaan komponen gaji tambahan yang diajukan oleh karyawan. Tabel menampilkan nama karyawan, nama komponen yang diminta, kuantitas (split menjadi dua kolom: *Requested Qty* dari `quantity_snapshot` — kuantitas awal saat request, dan *Approved Qty* dari `quantity` — kuantitas setelah admin *approve*), status permintaan (*pending*, *approved*, *rejected*), tanggal pengajuan, tanggal persetujuan, dan status realisasi. Pengguna dapat memfilter data berdasarkan status, rentang tanggal, dan kata kunci pencarian. Tombol aksi untuk menyetujui atau menolak permintaan dilengkapi dengan dialog konfirmasi yang menyediakan kolom input `quantity` untuk mengubah kuantitas saat approve. Proses persetujuan akan mencatat admin yang menyetujui dan tanggal persetujuan.
 
 ---
 
@@ -255,7 +255,7 @@ Seluruh halaman yang telah dijelaskan sebelumnya merupakan bagian dari koridor w
 | Lokasi | `Location/api/` | `MobileApi/LocationApiController` | Mendapatkan daftar lokasi presesi aktif |
 | Presensi | `Presence/api/` | `MobileApi/PrensenceApiController` | *Check-in*, *check-out*, riwayat presensi, *dashboard* karyawan |
 | Slip Gaji | `Receipt/api/` | `MobileApi/ReceiptApiController` | Daftar slip gaji, detail slip gaji per periode |
-| *Request* Gaji | `Request/api/` | `MobileApi/RequestSalaryApiController` | Daftar komponen yang dapat diminta, mengajukan permintaan, riwayat permintaan |
+| *Request* Gaji | `Request-Salary/` | `MobileApi/RequestSalaryApiController` | Daftar komponen yang dapat diminta, mengajukan permintaan, riwayat permintaan |
 
 ---
 

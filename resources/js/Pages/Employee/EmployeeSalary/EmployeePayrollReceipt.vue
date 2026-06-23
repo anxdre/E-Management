@@ -138,8 +138,8 @@ function getDataset(page?: number) {
         employee_id: props.user.id,
         search: paginateControl.searchQuery,
         date_filter: {
-            start: dateFilter.value.start?.toDate('Asia/Jakarta'),
-            end: dateFilter.value.end?.toDate('Asia/Jakarta'),
+            start: dateFilter.value.start?.toString(),
+            end: dateFilter.value.end?.toString(),
         },
     }))
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
@@ -212,8 +212,8 @@ function submitBulkItem() {
     dialogState.add.progress = true
     const params = {
         user_id: generateForm.value.assigned_to.map((user) => user.id),
-        date_start: generateForm.value.calculateDate.start.toDate('Asia/Jakarta'),
-        date_end: generateForm.value.calculateDate.end.toDate('Asia/Jakarta')
+        date_start: generateForm.value.calculateDate.start.toString(),
+        date_end: generateForm.value.calculateDate.end.toString()
     }
     axios.post(route('company-receipt.json.add.bulk', { user: companySalaryForm.value.user_id }), params)
         .then(({ data: { data: dataFromServer, message, status_code } }) => {
@@ -261,8 +261,8 @@ function exportExcel() {
     const params = {
         search: paginateControl.searchQuery,
         employee_id: props.user.id,
-        date_start: dateFilter.value.start?.toDate('Asia/Jakarta'),
-        date_end: dateFilter.value.end?.toDate('Asia/Jakarta'),
+        date_start: dateFilter.value.start?.toString(),
+        date_end: dateFilter.value.end?.toString(),
     }
     const url = route('company-receipt.export.excel', { ...params, user: attrs.auth.user.id })
     window.open(url, '_blank')

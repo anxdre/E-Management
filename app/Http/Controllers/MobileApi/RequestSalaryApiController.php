@@ -22,6 +22,7 @@ class RequestSalaryApiController extends Controller
     {
         $components = CompanySalary::query()
             ->whereHas('employeeSalary', fn($q) => $q->where('mst_user_id', $user->id)->where('available_to_request', true))
+            ->whereNotIn('type', ['hourly', 'presence'])
             ->get();
 
         return new JsonBody($components);
@@ -47,10 +48,14 @@ class RequestSalaryApiController extends Controller
             return new JsonBody(null, message: 'You already have a pending request for this component', status_code: 409);
         }
 
+        $component = CompanySalary::find($request->mst_company_salary_id);
+
         $requestedSalary = EmployeeRequestedSalary::create([
             'mst_user_id' => $request->mst_user_id,
             'mst_company_salary_id' => $request->mst_company_salary_id,
             'quantity' => $request->quantity,
+            'quantity_snapshot' => $request->quantity,
+            'salary_snapshot' => $component?->salary ?? 0,
             'status' => 'pending',
             'is_realized' => false,
         ]);

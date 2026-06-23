@@ -4,7 +4,7 @@ import {defaultToast, errorToast, navigateLink, successToast} from "@/lib/utils"
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/shadcn/ui/card";
 import {Button} from "@/shadcn/ui/button";
 import {ChevronLeft} from "lucide-vue-next";
-import TomTomMap from "@/Components/TomTomMap.vue";
+
 import {computed, onMounted, ref, useAttrs} from "vue";
 import {tryOnBeforeMount, watchPausable} from "@vueuse/core";
 import LayoutWrapper from "@/Layouts/LayoutWrapper.vue";
@@ -20,7 +20,7 @@ import {
 } from '@/shadcn/ui/number-field'
 import axios from "axios";
 import {useGlobalLoaderStrore} from "@/lib/GlobalLoaderStore";
-import {LngLat} from "@tomtom-international/web-sdk-maps";
+import {LngLat} from "maplibre-gl";
 import MapView from "@/Components/MapView.vue";
 import TimePicker from "@/Components/TimePicker.vue";
 
@@ -33,7 +33,6 @@ const {dataFromServer} = defineProps<{ dataFromServer: any }>()
 const data = ref({
     mst_user_id: useAttrs().auth?.user?.id,
     radius: 10,
-    max_hour: 8,
     name:null,
     latitude:null,
     longitude:null,
@@ -154,13 +153,11 @@ function _saveLocation() {
             <CardContent>
                 <div class="relative">
                     <div class="flex flex-col items-center">
-                        <!-- <TomTomMap @markerChange="value => markerPosition = value" :position="markerPosition" -->
-                        <!--            v-model:radius="radius"/> -->
                         <MapView v-model:marker-radius="radius[0]" v-model:marker-position="markerPosition"/>
                         <span class="text-xs text-muted-foreground">*click on map to add presence location</span>
 
                         <Card
-                            class="md:w-1/4 w-full h-3/4 overflow-scroll left-0 bg-white/30 md:absolute p-4 flex-col flex m-4 backdrop-blur-sm hover:backdrop-blur-0 hover:bg-white">
+                            class="md:w-1/4 w-full h-3/4 overflow-scroll right-4 top-4 bg-white/30 md:absolute p-4 flex-col flex m-4 backdrop-blur-sm hover:backdrop-blur-0 hover:bg-white">
                             <div class="space-y-2">
                                 <Slider class="w-full md:w-3/5"
                                         :default-value="[10]" :max="100" :min="1" :step="1"

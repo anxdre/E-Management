@@ -58,7 +58,7 @@ const paginationWatcher = watchPausable(
 )
 
 const dialogState = reactive({
-    approve: { show: false, data: null as any },
+    approve: { show: false, data: null as any, quantity: 1 },
     reject: { show: false, data: null as any },
 })
 
@@ -67,8 +67,8 @@ function getDataset(page: number) {
     isLoading.value = true
     const params: Record<string, any> = { page, search: paginateControl.searchQuery }
     if (filterStatus.value && filterStatus.value !== 'all') params.status = filterStatus.value
-    if (dateFilter.value?.start) params.date_start = dateFilter.value.start.toDate('Asia/Jakarta').toISOString().split('T')[0]
-    if (dateFilter.value?.end) params.date_end = dateFilter.value.end.toDate('Asia/Jakarta').toISOString().split('T')[0]
+    if (dateFilter.value?.start) params.date_start = dateFilter.value.start.toString()
+    if (dateFilter.value?.end) params.date_end = dateFilter.value.end.toString()
 
     axios.get(route('employee-request-salary.json.all', params))
         .then(({ data: { data: dataFromServer } }) => {
@@ -85,8 +85,11 @@ function getDataset(page: number) {
         .finally(() => { paginationWatcher.resume(); isLoading.value = false })
 }
 
-function approveReject(id: number, status: 'approved' | 'rejected') {
-    axios.put(route('employee-request-salary.json.approve-reject'), { id, status })
+function approveReject(id: number, status: 'approved' | 'rejected', quantity?: number) {
+    const payload: Record<string, any> = { id, status }
+    if (quantity) payload.quantity = quantity
+
+    axios.put(route('employee-request-salary.json.approve-reject'), payload)
         .then(({ data: { message } }) => {
             successToast('Success', message)
             dialogState.approve.show = false
@@ -140,9 +143,9 @@ onMounted(() => { getDataset(1) })
                             <PopoverTrigger as-child>
                                 <Button variant="outline" class="w-fit justify-start text-left font-normal gap-2">
                                     <CalendarIcon class="size-4"/>
-                                    {{ dateFilter?.start ? dayjs(dateFilter.start.toDate('Asia/Jakarta')).format('DD/MM/YYYY') : 'Start' }}
+                                    {{ dateFilter?.start ? dayjs(dateFilter.start.toString()).format('DD/MM/YYYY') : 'Start' }}
                                     -
-                                    {{ dateFilter?.end ? dayjs(dateFilter.end.toDate('Asia/Jakarta')).format('DD/MM/YYYY') : 'End' }}
+                                    {{ dateFilter?.end ? dayjs(dateFilter.end.toString()).format('DD/MM/YYYY') : 'End' }}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent class="w-auto p-0">
@@ -165,7 +168,8 @@ onMounted(() => { getDataset(1) })
                             <TableHead>No</TableHead>
                             <TableHead>Employee</TableHead>
                             <TableHead>Component</TableHead>
-                            <TableHead class="text-center">Quantity</TableHead>
+                            <TableHead class="text-center">Requested Qty</TableHead>
+                            <TableHead class="text-center">Approved Qty</TableHead>
                             <TableHead class="text-center">Status</TableHead>
                             <TableHead class="text-center">Request Date</TableHead>
                             <TableHead class="text-center">Approved Date</TableHead>
@@ -175,12 +179,12 @@ onMounted(() => { getDataset(1) })
                     </TableHeader>
                     <TableBody>
                         <TableRow v-if="isLoading">
-                            <TableCell colspan="9" class="text-center">
+                            <TableCell colspan="10" class="text-center">
                                 <LoaderCircleIcon class="animate-spin mx-auto"/>
                             </TableCell>
                         </TableRow>
                         <TableRow v-if="!isLoading && (!dataset || dataset.length == 0)">
-                            <TableCell colspan="9" class="text-center">
+                            <TableCell colspan="10" class="text-center">
                                 <div class="inline-flex gap-2 items-center text-lg">
                                     <TriangleAlert class="text-destructive animate-pulse"/>
                                     Tidak ada data
@@ -191,7 +195,15 @@ onMounted(() => { getDataset(1) })
                             <TableCell>{{ index + 1 + (paginateControl.perPageData * (paginateControl.currentPage - 1)) }}</TableCell>
                             <TableCell class="font-medium">{{ item.user?.user_detail?.fullname || 'Deleted User' }}</TableCell>
                             <TableCell>{{ item.component?.name || '-' }}</TableCell>
-                            <TableCell class="text-center">{{ item.quantity }}</TableCell>
+                            <TableCell class="text-center">
+                                {{ item.quantity_snapshot != null ? item.quantity_snapshot : '-' }}
+                            </TableCell>
+                            <TableCell class="text-center">
+                                {{ item.quantity }}
+                                <span v-if="item.quantity_snapshot != null && item.quantity != item.quantity_snapshot" class="text-xs text-muted-foreground ml-1">
+                                    (adjusted)
+                                </span>
+                            </TableCell>
                             <TableCell class="text-center">
                                 <Badge :variant="statusBadgeVariant(item.status)">{{ item.status }}</Badge>
                             </TableCell>
@@ -209,7 +221,7 @@ onMounted(() => { getDataset(1) })
                             <TableCell class="text-center">
                                 <div v-if="item.status === 'pending'" class="inline-flex gap-1">
                                     <Button size="sm" variant="success" class="size-7 p-0"
-                                            @click="dialogState.approve = { show: true, data: item }">
+                                            @click="dialogState.approve = { show: true, data: item, quantity: item.quantity }">
                                         <Check class="size-4"/>
                                     </Button>
                                     <Button size="sm" variant="destructive" class="size-7 p-0"
@@ -249,15 +261,23 @@ onMounted(() => { getDataset(1) })
                     <DialogTitle>Approve Request</DialogTitle>
                     <DialogDescription>
                         Approve request from <strong>{{ dialogState.approve.data?.user?.user_detail?.fullname }}</strong>
-                        for component <strong>{{ dialogState.approve.data?.component?.name }}</strong>
-                        (qty: {{ dialogState.approve.data?.quantity }}).
+                        for component <strong>{{ dialogState.approve.data?.component?.name }}</strong>.
                     </DialogDescription>
                 </DialogHeader>
+                <div class="grid gap-4 py-4">
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-muted-foreground">Original Request</span>
+                        <span>{{ dialogState.approve.data?.quantity_snapshot ?? dialogState.approve.data?.quantity }}</span>
+                        <span class="text-muted-foreground">Approved Quantity</span>
+                        <Input type="number" min="1"
+                               v-model.number="dialogState.approve.quantity"/>
+                    </div>
+                </div>
                 <DialogFooter>
                     <DialogClose as-child>
                         <Button variant="secondary">Cancel</Button>
                     </DialogClose>
-                    <Button @click="approveReject(dialogState.approve.data.id, 'approved')">Approve</Button>
+                    <Button @click="approveReject(dialogState.approve.data.id, 'approved', dialogState.approve.quantity)">Approve</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

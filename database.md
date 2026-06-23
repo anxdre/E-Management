@@ -20,15 +20,14 @@ Berikut disajikan relasi antar entitas dalam bentuk deskripsi tekstual:
 6. **mst_users** (1) ── (M) **trx_presence_employees**: Satu karyawan dapat memiliki banyak catatan presensi.
 7. **trx_presence_verifications** (1) ── (M) **trx_presence_employees**: Satu kode verifikasi dapat digunakan dalam satu atau lebih presensi.
 8. **mst_company_salary** (M) ── (M) **mst_users**: Relasi many-to-many yang dijembatani oleh tabel **pivot_employee_salary**, merepresentasikan komponen gaji yang ditugaskan kepada karyawan.
-9. **pivot_employee_salary** (1) ── (M) **trx_employee_requested_salary**: Satu baris pivot dapat memiliki banyak permintaan komponen tambahan dari karyawan (historis; setelah restrukturisasi, relasi ini berubah).
-10. **mst_company_salary** (1) ── (M) **trx_employee_requested_salary**: Satu komponen gaji dapat diminta oleh banyak karyawan.
-11. **mst_users** (1) ── (M) **trx_employee_requested_salary**: Satu karyawan dapat mengajukan banyak permintaan komponen gaji.
-12. **mst_users** (1) ── (M) **trx_salary_receipt**: Satu karyawan dapat memiliki banyak slip gaji.
-13. **trx_salary_receipt** (1) ── (M) **trx_salary_receipt_item**: Satu slip gaji terdiri dari banyak item komponen gaji.
-14. **mst_company_salary** (1) ── (M) **trx_salary_receipt_item**: Satu komponen gaji dapat muncul di banyak item slip.
-15. **trx_employee_requested_salary** (1) ── (M) **trx_salary_receipt_item**: Satu permintaan yang telah direalisasi tercatat dalam satu item slip.
-16. **mst_app_menus** (1) ── (M) **pivot_role_permission**: Satu menu aplikasi dapat memiliki banyak pengaturan izin per grup.
-17. **mst_company_groups** (1) ── (M) **pivot_role_permission**: Satu grup dapat memiliki banyak pengaturan izin.
+9. **mst_company_salary** (1) ── (M) **trx_employee_requested_salary**: Satu komponen gaji dapat diminta oleh banyak karyawan.
+10. **mst_users** (1) ── (M) **trx_employee_requested_salary**: Satu karyawan dapat mengajukan banyak permintaan komponen gaji.
+11. **mst_users** (1) ── (M) **trx_salary_receipt**: Satu karyawan dapat memiliki banyak slip gaji.
+12. **trx_salary_receipt** (1) ── (M) **trx_salary_receipt_item**: Satu slip gaji terdiri dari banyak item komponen gaji.
+13. **mst_company_salary** (1) ── (M) **trx_salary_receipt_item**: Satu komponen gaji dapat muncul di banyak item slip.
+14. **trx_employee_requested_salary** (1) ── (M) **trx_salary_receipt_item**: Satu permintaan yang telah direalisasi tercatat dalam satu item slip.
+15. **mst_app_menus** (1) ── (M) **pivot_role_permission**: Satu menu aplikasi dapat memiliki banyak pengaturan izin per grup.
+16. **mst_company_groups** (1) ── (M) **pivot_role_permission**: Satu grup dapat memiliki banyak pengaturan izin.
 
 ---
 
@@ -240,18 +239,20 @@ Tabel pivot yang menghubungkan komponen gaji (`mst_company_salary`) dengan karya
 
 #### 3.3.3 `trx_employee_requested_salary`
 
-Tabel transaksi yang mencatat permintaan komponen gaji tambahan yang diajukan oleh karyawan. Karyawan dapat meminta komponen gaji yang telah ditandai `available_to_request` pada tabel `pivot_employee_salary` untuk direalisasikan dalam slip gaji periode berjalan. Permintaan harus melalui proses persetujuan admin: status `pending` → `approved` atau `rejected`. Setelah permintaan disetujui dan direalisasikan dalam slip gaji, kolom `is_realized` ditetapkan menjadi `true`.
+Tabel transaksi yang mencatat permintaan komponen gaji tambahan yang diajukan oleh karyawan. Karyawan dapat meminta komponen gaji yang telah ditandai `available_to_request` pada tabel `pivot_employee_salary` untuk direalisasikan dalam slip gaji periode berjalan. Permintaan harus melalui proses persetujuan admin: status `pending` → `approved` atau `rejected`. Setelah disetujui admin dan direalisasikan dalam slip gaji, kolom `is_realized` ditetapkan menjadi `true` saat admin mengonfirmasi receipt (bukan saat generate).
 
 | Kolom | Tipe Data | Constraint | Deskripsi |
 |-------|-----------|------------|-----------|
 | `id` | `BIGINT UNSIGNED` | `PRIMARY KEY`, `AUTO_INCREMENT` | Identitas unik numerik permintaan |
 | `mst_user_id` | `BIGINT UNSIGNED` | `FOREIGN KEY → mst_users(id)`, `nullable` | Referensi ke karyawan pengaju |
 | `mst_company_salary_id` | `BIGINT UNSIGNED` | `FOREIGN KEY → mst_company_salary(id)`, `nullable` | Referensi ke komponen gaji yang diminta |
-| `quantity` | `INT` | `DEFAULT 1` | Kuantitas komponen yang diminta |
+| `quantity` | `INT` | `DEFAULT 1` | Kuantitas komponen yang diminta (bisa diubah admin saat approve) |
+| `quantity_snapshot` | `INT` | `nullable` | Frozen kuantitas original saat request diajukan |
+| `salary_snapshot` | `DECIMAL(15,2)` | `nullable` | Frozen nilai rate master saat request diajukan |
 | `status` | `ENUM(pending, approved, rejected)` | `DEFAULT pending`, `NOT NULL` | Status persetujuan permintaan |
 | `approved_date` | `DATETIME` | `nullable` | Waktu persetujuan oleh admin |
 | `mst_approved_by` | `BIGINT UNSIGNED` | `FOREIGN KEY → mst_users(id)`, `nullable` | Referensi ke admin yang menyetujui |
-| `is_realized` | `TINYINT(1)` | `DEFAULT false`, `NOT NULL` | Status realisasi; `true` jika telah dimasukkan ke slip gaji |
+| `is_realized` | `TINYINT(1)` | `DEFAULT false`, `NOT NULL` | Status realisasi; `true` jika telah masuk slip gaji yang di-approve |
 | `created_at` | `DATETIME` | `nullable` | Waktu pembuatan data |
 | `updated_at` | `DATETIME` | `nullable` | Waktu perubahan terakhir |
 | `deleted_at` | `DATETIME` | `nullable` | Waktu penghapusan lunak |
@@ -296,7 +297,7 @@ Tabel transaksi utama yang menyimpan slip gaji karyawan untuk suatu periode tert
 
 #### 3.3.5 `trx_salary_receipt_item`
 
-Tabel transaksi yang menyimpan rincian item komponen gaji dalam setiap slip gaji. Setiap baris merepresentasikan satu komponen gaji yang telah dihitung nilainya untuk periode tertentu, termasuk komponen default, komponen hasil permintaan yang direalisasi, dan komponen pajak. Kolom `quantity` menyimpan kuantitas (misal: jumlah jam, jumlah presensi, atau 1 untuk komponen fixed), dan `total_value` menyimpan hasil kalkulasi (nilai komponen × kuantitas).
+Tabel transaksi yang menyimpan rincian item komponen gaji dalam setiap slip gaji. Setiap baris merepresentasikan satu komponen gaji yang telah dihitung nilainya untuk periode tertentu, termasuk komponen default, komponen hasil permintaan yang direalisasi, dan komponen pajak. Kolom `quantity` menyimpan kuantitas (misal: jumlah jam, jumlah presensi, atau 1 untuk komponen fixed), dan `total_value` menyimpan hasil kalkulasi (nilai komponen × kuantitas). Nama dan rate komponen di-snapshot dari master saat generate agar nilai receipt tidak berubah walau master diedit.
 
 | Kolom | Tipe Data | Constraint | Deskripsi |
 |-------|-----------|------------|-----------|
@@ -306,9 +307,10 @@ Tabel transaksi yang menyimpan rincian item komponen gaji dalam setiap slip gaji
 | `trx_employee_requested_salary_id` | `BIGINT UNSIGNED` | `FOREIGN KEY → trx_employee_requested_salary(id)`, `nullable` | Referensi ke permintaan komponen (jika item berasal dari request) |
 | `quantity` | `INT` | `NOT NULL` | Kuantitas yang digunakan dalam kalkulasi |
 | `total_value` | `DECIMAL(15)` | `NOT NULL` | Nilai total hasil kalkulasi (nilai komponen × kuantitas) |
+| `salary_name_snapshot` | `VARCHAR(255)` | `nullable` | Nama komponen yang dibekukan saat generate receipt |
+| `salary_rate_snapshot` | `DECIMAL(15,2)` | `nullable` | Rate komponen yang dibekukan saat generate receipt |
 | `created_at` | `DATETIME` | `nullable` | Waktu pembuatan data |
 | `updated_at` | `DATETIME` | `nullable` | Waktu perubahan terakhir |
-| `deleted_at` | `DATETIME` | `nullable` | Waktu penghapusan lunak |
 
 **Relasi:**
 - *Many-to-one* dengan `trx_salary_receipt` melalui `trx_salary_receipt_id`.
@@ -444,7 +446,7 @@ Berikut disajikan ringkasan seluruh relasi *foreign key* dalam basis data:
 
 2. **Engine InnoDB:** Seluruh tabel menggunakan mesin penyimpanan InnoDB yang mendukung *transactions*, *foreign key constraints*, dan *row-level locking*.
 
-3. **Soft Deletes:** Tabel `mst_users`, `mst_user_details`, `mst_company_salary`, `trx_employee_requested_salary`, `trx_salary_receipt`, dan `trx_salary_receipt_item` telah dilengkapi kolom `deleted_at` untuk mendukung penghapusan lunak, sehingga data tidak benar-benar dihapus dari basis data melainkan hanya ditandai sebagai terhapus.
+3. **Soft Deletes:** Tabel `mst_users`, `mst_user_details`, `mst_company_salary`, `trx_employee_requested_salary`, dan `trx_salary_receipt` telah dilengkapi kolom `deleted_at` untuk mendukung penghapusan lunak, sehingga data tidak benar-benar dihapus dari basis data melainkan hanya ditandai sebagai terhapus. Tabel `trx_salary_receipt_item` menggunakan hard delete karena snapshot sudah cukup sebagai audit trail, dan soft delete hanya menyebabkan bloat setiap kali receipt diedit.
 
 4. **Enumerasi Status:** Sistem menggunakan tipe `ENUM` untuk kolom-kolom yang memiliki nilai terbatas dan tetap, seperti `type` pada `mst_users` (`company`, `employee`, `superadmin`), `status_by_admin` pada `trx_presence_employees` (`pending`, `approved`, `rejected`), dan `status` pada tabel transaksi penggajian (`pending`, `approved`, `denied`).
 

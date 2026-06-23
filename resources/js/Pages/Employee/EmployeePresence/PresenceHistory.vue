@@ -49,7 +49,7 @@ import {
 import { Label } from "@/shadcn/ui/label";
 import { usePage } from "@inertiajs/vue3";
 import MapView from "@/Components/MapView.vue";
-import { LngLat } from "@tomtom-international/web-sdk-maps";
+import { LngLat } from "maplibre-gl";
 import dayjs from "dayjs";
 import { Textarea } from "@/shadcn/ui/textarea";
 import CustomLink from "@/Components/CustomLink.vue";
@@ -374,10 +374,10 @@ onMounted(async () => {
                     <div class="flex flex-col space-y-4">
                         <div class="border p-8 rounded-md relative">
                             <Badge variant="secondary" class="absolute -top-3 left-8">Presence Position</Badge>
-                            <MapView id="map" class="h-[200px] md:h-[400px] col-span-3"
+                             <MapView id="map" class="h-[200px] md:h-[400px] col-span-3"
                                      view-only="true"
                                      :marker-position="new LngLat(dialogState.show.data.longitude ?? 112.7166368, dialogState.show.data.latitude ?? -7.272563)"
-                                     marker-radius="0"/>
+                                     :marker-radius="0"/>
                         </div>
                         <div class="border p-8 space-y-4 rounded-md relative">
                             <Badge variant="secondary" class="absolute -top-3 left-8">Working Hour</Badge>
@@ -637,7 +637,7 @@ onMounted(async () => {
                                 <div class="grid grid-cols-4 items-center gap-4">
                                     <Label for="map" class="text-right">Location</Label>
                                     <MapView id="map" class="h-[100px] md:h-[200px] col-span-3"
-                                             v-model:marker-position="markerPosition" marker-radius="0"/>
+                                             v-model:marker-position="markerPosition" :marker-radius="0"/>
                                 </div>
 
                                 <div class="grid grid-cols-4 items-center gap-4">

@@ -130,21 +130,20 @@ class SalaryReceiptSeeder extends Seeder
             'total_presence_record' => $totalPresenceRecord,
             'start_date' => $start,
             'end_date' => $end,
-            'status' => 'approved',
+            'status' => 'pending',
         ]);
 
         foreach ($salaryComponents as $component) {
+            $salary = CompanySalary::find($component['id']);
             SalaryReceiptItem::create([
                 'trx_salary_receipt_id' => $receipt->id,
                 'mst_company_salary_id' => $component['id'],
                 'quantity' => $component['quantity'],
                 'total_value' => $component['total_value'],
                 'trx_employee_requested_salary_id' => $component['requested_id'] ?? null,
+                'salary_name_snapshot' => $salary?->name,
+                'salary_rate_snapshot' => $salary?->salary,
             ]);
-        }
-
-        foreach ($requestedSalaries as $requested) {
-            $requested->update(['is_realized' => true]);
         }
     }
 

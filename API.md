@@ -1,6 +1,6 @@
 # API Documentation
 
-All responses use `JsonBody` resource format:
+All responses use `JsonBody` resource format. All date params sent as `YYYY-MM-DD` strings (`.toString()`) — no timezone conversion.
 
 ```json
 {
@@ -352,10 +352,20 @@ Get salary receipt detail.
     "companySalaryItem": [
       {
         "id": 1, "name": "Gaji Pokok", "quantity": 1, "total_value": 4000000,
+        "detail_item": {
+          "quantity": 1, "total_value": 4000000,
+          "salary_name_snapshot": "Gaji Pokok",
+          "salary_rate_snapshot": 4000000
+        },
         "is_requested": false, "request_info": null
       },
       {
         "id": 3, "name": "Lembur", "quantity": 10, "total_value": 500000,
+        "detail_item": {
+          "quantity": 10, "total_value": 500000,
+          "salary_name_snapshot": "Lembur",
+          "salary_rate_snapshot": 50000
+        },
         "is_requested": true,
         "request_info": {
           "id": 1, "quantity": 10, "status": "approved",
@@ -385,17 +395,17 @@ Export own salary receipt as PDF.
 
 ### Request Salary (Mobile)
 
-Base URL: `/Request/Salary/api/` (middleware: `auth:sanctum`)
+Base URL: `/Request-Salary/` (middleware: `auth:sanctum`)
 
-#### `GET /available-components`
+#### `GET /{user}/api/available-components`
 Get salary components available for request.
 
-**Query params:**
+**URL params:**
 | Param | Type | Description |
 |-------|------|-------------|
-| `user_id` | int | Employee user ID |
+| `user` | int | Employee user ID (route param) |
 
-Returns only components where `available_to_request = true` in pivot.
+Returns only components where `available_to_request = true` in pivot. Excludes `hourly` and `presence` types (hanya `fixed` yang bisa di-request).
 
 **Response:** `200`
 ```json
@@ -411,23 +421,25 @@ Returns only components where `available_to_request = true` in pivot.
 
 ---
 
-#### `POST /create`
+#### `POST /api/create/`
 Submit a salary component request.
 
 **Request:**
 ```json
 {
-  "user_id": 1,
-  "component_id": 1,
-  "quantity": 10,
-  "note": "Lembur project A"
+  "mst_user_id": 1,
+  "mst_company_salary_id": 1,
+  "quantity": 10
 }
 ```
 
 **Response:** `200`
 ```json
 {
-  "data": { "id": 1, "status": "pending" },
+  "data": {
+    "id": 1, "status": "pending",
+    "quantity_snapshot": 10, "salary_snapshot": 50000
+  },
   "message": "Request submitted successfully"
 }
 ```
@@ -438,13 +450,17 @@ Submit a salary component request.
 
 ---
 
-#### `GET /all`
+#### `GET /{user}/api/all`
 Get own salary requests.
+
+**URL params:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `user` | int | Employee user ID (route param) |
 
 **Query params:**
 | Param | Type | Description |
 |-------|------|-------------|
-| `user_id` | int | Employee user ID |
 | `status` | string? | `pending`, `approved`, `rejected` |
 | `date_start` | date? | Start date |
 | `date_end` | date? | End date |
@@ -459,9 +475,10 @@ Get own salary requests.
         "mst_user_id": 1,
         "mst_company_salary_id": 1,
         "quantity": 10,
+        "quantity_snapshot": 10,
+        "salary_snapshot": 50000,
         "status": "pending",
         "is_realized": false,
-        "note": "Lembur project A",
         "created_at": "...",
         "component": { "id": 1, "name": "Lembur", "salary": 50000, "type": "hourly" }
       }
@@ -906,6 +923,8 @@ Query params:
 |-------|------|-------------|
 | `search` | string? | Search by employee name/email |
 | `employee_id` | int? | Filter by specific employee |
+| `status` | string? | `pending`, `approved`, `denied` |
+| `order_by` | string? | `newest` / `oldest` (default: newest) |
 | `date_filter[start]` | date? | Start date |
 | `date_filter[end]` | date? | End date |
 | `page` | int? | Page number |
@@ -937,15 +956,15 @@ Response:
 }
 ```
 Generates receipts by:
-1. Counting presence records in period → work hours & presence count
+1. Counting presence records in period → work hours & presence count (work hours clamped to `max(0, diffInHours)`)
 2. Taking `included_at_default = true` components + approved `EmployeeRequestedSalary` entries
-3. Component calculation:
+3. Snapshot: `salary_name_snapshot` and `salary_rate_snapshot` frozen from master at generation time
+4. Component calculation:
    - `fixed` → salary × quantity
-   - `hourly` → salary × work hours
+   - `hourly` → salary × work hours (clamped ≥ 0)
    - `presence` → salary × presence count
    - `tax` → percentage of total before tax
-4. Tax deducted from total
-5. Requested salaries marked `is_realized = true`
+5. Tax deducted from total
 
 **`PUT /update/json`**
 ```json
@@ -953,13 +972,13 @@ Generates receipts by:
   "id": 1,
   "company_salary_item": [
     { "id": 1, "quantity": 2 },
-    { "id": 2 }
+    { "id": 2, "quantity": 5 }
   ],
   "start_date": "2026-06-01",
   "end_date": "2026-06-30"
 }
 ```
-Recalculates receipt using specified components (overrides defaults).
+Update-in-place: preserves existing `trx_salary_receipt_item` rows. Matches items by `mst_company_salary_id`, updates qty+total value directly. Requested items are read-only (skip edit). Fresh snapshot from master for new items. Deletes items omitted from the list. Missing items from bulk generate are not auto-added. Does NOT call `calculateEmployeeSalary`.
 
 **`PUT /confirm/json`**
 ```json
@@ -968,7 +987,7 @@ Recalculates receipt using specified components (overrides defaults).
   "status": true
 }
 ```
-`status: true` → `approved`, `false` → `denied`.
+`status: true` → `approved`, `false` → `denied`. On approval, all linked `EmployeeRequestedSalary` entries are marked `is_realized = true`.
 
 **`DELETE /delete/json`**
 ```json
@@ -1000,10 +1019,20 @@ Response — receipt detail with requested salary info:
     "companySalaryItem": [
       {
         "id": 1, "name": "Gaji Pokok", "quantity": 1, "total_value": 4000000,
+        "detail_item": {
+          "quantity": 1, "total_value": 4000000,
+          "salary_name_snapshot": "Gaji Pokok",
+          "salary_rate_snapshot": 4000000
+        },
         "is_requested": false, "request_info": null
       },
       {
         "id": 3, "name": "Lembur", "quantity": 10, "total_value": 500000,
+        "detail_item": {
+          "quantity": 10, "total_value": 500000,
+          "salary_name_snapshot": "Lembur",
+          "salary_rate_snapshot": 50000
+        },
         "is_requested": true,
         "request_info": {
           "id": 1, "quantity": 10, "status": "approved",
@@ -1017,7 +1046,6 @@ Response — receipt detail with requested salary info:
 }
 ```
 
----
 ### Employee Request Salary (Web Admin)
 
 Base: `/Employee/Request-Salary/` (middleware: `auth`)
@@ -1049,9 +1077,10 @@ Response:
         "mst_user_id": 1,
         "mst_company_salary_id": 1,
         "quantity": 10,
+        "quantity_snapshot": 10,
+        "salary_snapshot": 50000,
         "status": "pending",
         "is_realized": false,
-        "note": "Lembur project A",
         "created_at": "...",
         "user": { "userDetail": { "fullname": "John" } },
         "component": { "id": 1, "name": "Lembur", "salary": 50000, "type": "hourly" }
@@ -1068,10 +1097,11 @@ Request:
 ```json
 {
   "id": 1,
-  "status": true
+  "status": true,
+  "quantity": 15
 }
 ```
-`status: true` → `approved`, `false` → `rejected`. Sets `mst_approved_by` to current admin.
+`status: true` → `approved`, `false` → `rejected`. Sets `mst_approved_by` to current admin. `quantity` optional — overrides the request quantity (original frozen in `quantity_snapshot`).
 
 Response:
 ```json

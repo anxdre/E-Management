@@ -267,7 +267,7 @@ onMounted(() => {
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent class="w-auto p-0">
-                                        <Calendar @update:model-value="date => data.start_date = date" initial-focus />
+                                        <Calendar @update:model-value="date => data.start_date = date.toString()" initial-focus />
                                     </PopoverContent>
                                 </Popover>
                             </div>
@@ -289,7 +289,7 @@ onMounted(() => {
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent class="w-auto p-0">
-                                        <Calendar @update:model-value="date => data.end_date = date" initial-focus />
+                                        <Calendar @update:model-value="date => data.end_date = date.toString()" initial-focus />
                                     </PopoverContent>
                                 </Popover>
                             </div>
@@ -337,13 +337,30 @@ onMounted(() => {
                                     <TableCell v-if="!isEdit" class="font-medium">
                                         <div class="flex flex-col">
                                             <div class="inline-flex items-center gap-1">
-                                                {{ salItem.name }}
+                                                {{ salItem.detail_item?.salary_name_snapshot ?? salItem.name }}
                                                 <Badge v-if="salItem.is_requested" variant="outline" class="text-xs">Requested</Badge>
                                             </div>
+                                            <span class="text-xs text-muted-foreground leading-tight">
+                                                <template v-if="salItem.detail_item?.salary_rate_snapshot">
+                                                    Rate: {{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(salItem.detail_item.salary_rate_snapshot) }}
+                                                </template>
+                                            </span>
                                             <span v-if="salItem.is_requested && salItem.request_info" class="text-xs text-muted-foreground mt-0.5 leading-tight">
                                                 Requested {{ dayjs(salItem.request_info.created_at).format('DD/MM/YYYY') }}
                                                 · Approved by {{ data.company_profile?.company_name ?? salItem.request_info.approved_by?.user_detail?.fullname ?? '-' }}
                                                 {{ salItem.request_info.approved_date ? dayjs(salItem.request_info.approved_date).format('DD/MM/YYYY') : '' }}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell v-else-if="salItem.is_requested" class="font-medium">
+                                        <div class="flex flex-col">
+                                            <div class="inline-flex items-center gap-1">
+                                                {{ salItem.detail_item?.salary_name_snapshot ?? salItem.name }}
+                                                <Badge variant="outline" class="text-xs">Requested</Badge>
+                                            </div>
+                                            <span v-if="salItem.request_info" class="text-xs text-muted-foreground mt-0.5 leading-tight">
+                                                Requested {{ dayjs(salItem.request_info.created_at).format('DD/MM/YYYY') }}
+                                                · Approved by {{ salItem.request_info.approved_by?.user_detail?.fullname ?? '-' }}
                                             </span>
                                         </div>
                                     </TableCell>
@@ -423,8 +440,11 @@ onMounted(() => {
                                     <TableCell v-if="!isEdit" class="text-center">
                                         {{ salItem.detail_item.quantity }}
                                     </TableCell>
+                                     <TableCell v-else-if="salItem.is_requested" class="text-center">
+                                         {{ salItem.detail_item.quantity }}
+                                     </TableCell>
                                      <TableCell v-else class="text-center">
-                                        <Input type="number" min="0" v-if="salItem.type == 'fixed' || salItem.is_requested" :default-value="salItem.detail_item.quantity"  v-model="salItem.quantity"/>
+                                        <Input type="number" min="0" v-if="salItem.type == 'fixed'" :default-value="salItem.detail_item.quantity"  v-model="salItem.quantity"/>
                                         <Label v-else>-</Label>
                                     </TableCell>
                                     <TableCell v-if="!isEdit && !salItem.is_tax && salItem.calculation_type == 'add' " class="text-right">

@@ -44,15 +44,22 @@ class EmployeeRequestSalaryController extends Controller
         $request->validate([
             'id' => 'required|exists:trx_employee_requested_salary,id',
             'status' => 'required|in:approved,rejected',
+            'quantity' => 'nullable|integer|min:1',
         ]);
 
         $requestedSalary = EmployeeRequestedSalary::query()->findOrFail($request->id);
 
-        $requestedSalary->update([
+        $updateData = [
             'status' => $request->status,
             'mst_approved_by' => auth()->id(),
             'approved_date' => $request->status === 'approved' ? now() : null,
-        ]);
+        ];
+
+        if ($request->filled('quantity')) {
+            $updateData['quantity'] = $request->quantity;
+        }
+
+        $requestedSalary->update($updateData);
 
         return new JsonBody($requestedSalary, message: 'Request ' . $request->status . ' successfully');
     }

@@ -31,9 +31,8 @@
     "dependencies": {
         "@formkit/auto-animate": "^0.8.2",
         "@internationalized/date": "^3.8.2",
+        "@maplibre/maplibre-gl-geocoder": "^1.9.4",
         "@radix-icons/vue": "^1.0.0",
-        "@tomtom-international/web-sdk-maps": "^6.25.0",
-        "@tomtom-international/web-sdk-services": "^6.25.0",
         "@vee-validate/zod": "^4.15.0",
         "@vue-leaflet/vue-leaflet": "^0.10.1",
         "@vuepic/vue-datepicker": "^11.0.2",
@@ -51,6 +50,7 @@
         "leaflet": "^1.9.4",
         "lucide-vue-next": "^0.428.0",
         "mapbox-gl": "^3.12.0",
+        "maplibre-gl": "^5.24.0",
         "pdfjs-dist": "^5.4.54",
         "pinia": "^2.3.1",
         "radix-vue": "^1.9.17",

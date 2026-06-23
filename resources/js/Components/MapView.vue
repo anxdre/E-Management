@@ -1,97 +1,199 @@
 <script setup lang="ts">
-import '@tomtom-international/web-sdk-maps/dist/maps.css';
-import tt,{ LngLat, LngLatLike } from '@tomtom-international/web-sdk-maps';
-import { onMounted, ref, watch } from 'vue';
+import maplibregl, { LngLat, LngLatLike } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import MaplibreGeocoder from '@maplibre/maplibre-gl-geocoder';
+import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { watchPausable } from '@vueuse/core';
 import { cn } from "@/lib/utils";
 
-const markerPosition = defineModel<LngLatLike|undefined>('markerPosition',{required:true})
-const markerRadius = defineModel('markerRadius',{required:true})
-const mapRef = ref<HTMLElement|null>(null)
 
-let globalMap:tt.Map
-let globalMarker:tt.Marker
+const markerPosition = defineModel<LngLatLike | undefined>('markerPosition', { required: true })
+const markerRadius = defineModel<number>('markerRadius', { required: true })
+const mapRef = ref<HTMLElement | null>(null)
+
+let globalMap: maplibregl.Map
+let globalMarker: maplibregl.Marker | null = null
 const globalCircleId = 'marker-circle'
 const popUpOffset = 25
 
 const props = defineProps<{
     class?: string,
-    viewOnly?:boolean
+    viewOnly?: boolean
 }>()
 
-onMounted(()=>{
+const tomtomKey = "YfCCUSubfF0dz5KH5lwkQxQbuCGwKGYy"
+
+onMounted(() => {
     markerWatcher.pause()
-if(!mapRef.value) return
+    if (!mapRef.value) return
 
-    globalMap = tt.map({
-        key: "YfCCUSubfF0dz5KH5lwkQxQbuCGwKGYy",
+    const styleUrl = `https://api.tomtom.com/map/1/style/25.2.3-0/basic_main.json?key=${tomtomKey}`
+    globalMap = new maplibregl.Map({
         container: mapRef.value,
-        center: markerPosition.value,
-        zoom: 20,
+        style: styleUrl,
+        center: markerPosition.value as maplibregl.LngLatLike ?? [106.865, -6.175],
+        zoom: 15,
     })
 
-    globalMap.on("load",()=>{
-        window.addEventListener("resize", ()=>globalMap.resize())
-        markerWatcher.resume()
-        addGlobalMarker(markerPosition.value)
-    })
+    globalMap.addControl(new maplibregl.NavigationControl(), 'top-right')
 
-    globalMap.on("click", (location:any)=>{
-        if (props.viewOnly){
-            return
+    if (!props.viewOnly) {
+        const geocodingAPI = {
+            forwardGeocode: async (config: { query: string; limit?: number }) => {
+                const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(config.query)}.json` +
+                    `?key=${tomtomKey}&countrySet=ID&limit=${config.limit || 5}&language=id-ID`
+                const res = await fetch(url)
+                const data = await res.json()
+                return {
+                    type: 'FeatureCollection' as const,
+                    features: (data.results ?? []).map((r: any) => ({
+                        type: 'Feature' as const,
+                        geometry: {
+                            type: 'Point' as const,
+                            coordinates: [r.position.lon, r.position.lat],
+                        },
+                        place_name: r.address?.freeformAddress || r.poi?.name || '',
+                        properties: {
+                            address: r.address?.freeformAddress,
+                            name: r.poi?.name,
+                            id: r.id,
+                        },
+                    })),
+                }
+            },
         }
-        const {lng,lat}= location.lngLat
-        markerPosition.value = new tt.LngLat(lng,lat)
+
+        const geocoder = new MaplibreGeocoder(geocodingAPI, {
+            maplibregl: maplibregl,
+            marker: false,
+            flyTo: false,
+            showResultsWhileTyping: true,
+            placeholder: 'Cari alamat...',
+            limit: 5,
+            debounceSearch: 300,
+        })
+        globalMap.addControl(geocoder, 'top-left')
+
+        geocoder.on('result', (e: any) => {
+            const feature = e.result
+            const coords = feature.geometry.coordinates as [number, number]
+            const lngLat = new maplibregl.LngLat(coords[0], coords[1])
+            markerPosition.value = lngLat
+            addGlobalMarker(lngLat)
+            globalMap.flyTo({ center: coords, zoom: 16 })
+        })
+
+        const locateBtn = document.createElement('button')
+        locateBtn.className = 'maplibregl-ctrl-icon'
+        locateBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>'
+        locateBtn.title = 'Dapatkan lokasi saya'
+        locateBtn.style.display = 'flex'
+        locateBtn.style.alignItems = 'center'
+        locateBtn.style.justifyContent = 'center'
+
+        const locateContainer = document.createElement('div')
+        locateContainer.className = 'maplibregl-ctrl maplibregl-ctrl-group'
+        locateContainer.appendChild(locateBtn)
+
+        locateBtn.onclick = () => {
+            if (!navigator.geolocation || !globalMap) return
+            locateBtn.disabled = true
+            locateBtn.style.opacity = '0.5'
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const userLoc = new maplibregl.LngLat(pos.coords.longitude, pos.coords.latitude)
+                    markerPosition.value = userLoc
+                    addGlobalMarker(userLoc)
+                    globalMap.flyTo({ center: userLoc, zoom: 15 })
+                    locateBtn.disabled = false
+                    locateBtn.style.opacity = '1'
+                },
+                () => {
+                    locateBtn.disabled = false
+                    locateBtn.style.opacity = '1'
+                },
+                { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
+            )
+        }
+
+        globalMap.addControl({
+            onAdd: () => locateContainer,
+            onRemove: () => {},
+        }, 'top-right')
+
+    }
+
+    let resizeHandler: (() => void) | null = null
+    globalMap.on("load", () => {
+        resizeHandler = () => globalMap.resize()
+        window.addEventListener("resize", resizeHandler)
+        markerWatcher.resume()
+        addGlobalMarker(toLngLat(markerPosition.value))
+    })
+
+    globalMap.on("click", (location: any) => {
+        if (props.viewOnly) return
+        const { lng, lat } = location.lngLat
+        markerPosition.value = new maplibregl.LngLat(lng, lat)
         addGlobalMarker(location.lngLat)
-        // addCircleLayer(globalMap,markerPosition.value, markerRadius.value)
     })
 })
 
-function addGlobalMarker(coordinate:LngLat){
-    if (globalMarker){
+onUnmounted(() => {
+    globalMarker?.remove()
+    globalMap?.remove()
+})
+
+function addGlobalMarker(coordinate: LngLat | undefined) {
+    if (!coordinate) return
+
+    if (globalMarker) {
         globalMarker.setLngLat(coordinate)
         addCircleLayer(globalMap, coordinate, markerRadius.value)
         return
     }
 
-    try{
-    globalMarker = new tt.Marker({draggable:!props.viewOnly,anchor:'center'})
-    .setLngLat(coordinate)
-    .addTo(globalMap)
-    }catch(e:any){
+    try {
+        globalMarker = new maplibregl.Marker({ draggable: !props.viewOnly })
+            .setLngLat(coordinate)
+            .addTo(globalMap)
+    } catch (e: any) {
         console.log(e.message)
     }
 
-    globalMarker.on("dragend", ()=>{
-        const {lng,lat} = globalMarker.getLngLat()
-        markerPosition.value = new tt.LngLat(lng,lat)
-        // addCircleLayer(globalMap, markerPosition.value, markerRadius.value)
-    })
+    if (globalMarker) {
+        globalMarker.on("dragend", () => {
+            const { lng, lat } = globalMarker!.getLngLat()
+            markerPosition.value = new maplibregl.LngLat(lng, lat)
+        })
 
-    globalMarker.setPopup(new tt.Popup({
-        offset:popUpOffset
-    }).setHTML("Set presence on this location"))
+        globalMarker.setPopup(new maplibregl.Popup({
+            offset: popUpOffset
+        }).setHTML("Set presence on this location"))
+    }
 
-    globalMap.panTo(markerPosition.value, {animate:true})
-    addCircleLayer(globalMap, markerPosition.value, markerRadius.value)
+    addCircleLayer(globalMap, coordinate, markerRadius.value)
 }
 
-function addCircleLayer(map: tt.Map, center: LngLat, radius: number) {
-    if (map.getLayer(globalCircleId)){
+function addCircleLayer(map: maplibregl.Map, center: LngLat, radius: number) {
+    if (map.getLayer(globalCircleId)) {
         map.removeLayer(globalCircleId);
         map.removeSource(globalCircleId);
     }
 
-    // Tambahkan source GeoJSON untuk circle
     map.addSource(globalCircleId, {
         type: "geojson",
         data: {
             type: "FeatureCollection",
-            features: [createCircle(center, radius)],
+            features: [{
+                type: "Feature",
+                properties: {},
+                geometry: createCircle(center, radius),
+            }],
         },
     });
 
-    // Tambahkan layer circle dengan konfigurasi style
     map.addLayer({
         id: globalCircleId,
         type: "fill",
@@ -104,44 +206,49 @@ function addCircleLayer(map: tt.Map, center: LngLat, radius: number) {
 }
 
 function createCircle(center: LngLat, radius: number, points = 64) {
-    const coords = [];
-    const earthRadius = 6371000; // Radius bumi dalam meter
+    const coords: [number, number][] = [];
+    const earthRadius = 6371000;
 
     for (let i = 0; i <= points; i++) {
         const angle = (i / points) * (2 * Math.PI);
-        const dx = radius * Math.cos(angle); // Offset X dalam meter
-        const dy = radius * Math.sin(angle); // Offset Y dalam meter
+        const dx = radius * Math.cos(angle);
+        const dy = radius * Math.sin(angle);
 
-        // Konversi offset meter ke derajat
         const latOffset = (dy / earthRadius) * (180 / Math.PI);
         const lngOffset = (dx / (earthRadius * Math.cos((center.lat * Math.PI) / 180))) * (180 / Math.PI);
 
-        const lat = center.lat + latOffset;
-        const lng = center.lng + lngOffset;
-        coords.push([lng, lat]);
+        coords.push([center.lng + lngOffset, center.lat + latOffset]);
     }
 
     return {
-        type: "Feature",
-        geometry: {
-            type: "Polygon",
-            coordinates: [coords],
-        },
+        type: "Polygon" as const,
+        coordinates: [coords],
     };
 }
 
-const markerWatcher = watchPausable(markerPosition,()=>{
-    addCircleLayer(globalMap, markerPosition.value, markerRadius.value)
-},{deep:true})
+function toLngLat(pos: LngLatLike | undefined): LngLat | undefined {
+    if (!pos) return undefined
+    if (pos instanceof LngLat) return pos
+    if (Array.isArray(pos)) return new LngLat(pos[0], pos[1])
+    return new LngLat(pos.lng, pos.lat)
+}
 
-watch(markerRadius,()=>{
-    addCircleLayer(globalMap, markerPosition.value, markerRadius.value)
+const markerWatcher = watchPausable(markerPosition, () => {
+    const pos = toLngLat(markerPosition.value)
+    if (globalMarker && pos) {
+        globalMarker.setLngLat(pos)
+        addCircleLayer(globalMap, pos, markerRadius.value)
+    }
+}, { deep: true })
+
+watch(markerRadius, () => {
+    const pos = toLngLat(markerPosition.value)
+    if (globalMarker && pos) {
+        addCircleLayer(globalMap, pos, markerRadius.value)
+    }
 })
 
 </script>
 <template>
-    <div ref="mapRef" :class="cn('w-full h-[500px] md:h-[800px] z-0', props.class)"></div>
+    <div ref="mapRef" :class="cn('w-full h-[500px] md:h-[800px]', props.class)"></div>
 </template>
-<style>
-
-</style>

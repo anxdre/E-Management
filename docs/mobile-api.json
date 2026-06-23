@@ -164,7 +164,11 @@
       "headers": [],
       "parameters": [
         {
-          "name": "mst_presence_location_id",
+          "name": "status",
+          "value": ""
+        },
+        {
+          "name": "location_id",
           "value": ""
         },
         {
@@ -173,14 +177,6 @@
         },
         {
           "name": "date_end",
-          "value": ""
-        },
-        {
-          "name": "status",
-          "value": ""
-        },
-        {
-          "name": "location_id",
           "value": ""
         },
         {

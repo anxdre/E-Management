@@ -3,8 +3,9 @@
 ## Tech Stack
 - **Backend:** Laravel 11, PHP 8.2, MySQL, Sanctum
 - **Frontend:** Inertia.js + Vue 3 (Composition API, `<script setup>`), TypeScript, TailwindCSS, shadcn-vue
+- **Maps:** maplibre-gl + @maplibre/maplibre-gl-geocoder (TomTom Map Display API tiles + TomTom Search API)
 - **Routing:** YALR (PHP 8 attributes di controller) — `routes/web.php` hanya berisi landing page
-- **State:** Pinia, Forms: Vee-Validate + Zod, Maps: Leaflet/TomTom/Google Maps
+- **State:** Pinia, Forms: Vee-Validate + Zod
 
 ---
 
@@ -48,15 +49,20 @@ app/Http/Controllers/
     PresenceLocationController.php   # CRUD lokasi absensi
     PresenceVerificationController.php  # Generate kode verifikasi
   MobileApi/
-    AuthApiController.php      # Sign-in mobile + base-token
-    LocationApiController.php  # Ambil lokasi absensi
-    PrensenceApiController.php # Check-in/out + history (mobile)
-    ReceiptApiController.php   # Slip gaji (mobile)
+    AuthApiController.php           # Sign-in mobile + base-token
+    LocationApiController.php       # Ambil lokasi absensi
+    PrensenceApiController.php      # Check-in/out + history (mobile)
+    ReceiptApiController.php        # Slip gaji (mobile)
+    RequestSalaryApiController.php  # Request komponen gaji (mobile)
 
 app/Http/Middleware/
   EnsureUserIsCompany.php      # only-company: cek isSuper()
   EnsureUserIsEmployee.php     # only-employee: cek isEmployee()
   EnsureUserWithinCompanyScope.php  # scope-company: akses hanya ke self atau own employee
+
+resources/js/Components/
+  MapView.vue            # maplibre-gl map: TomTom tiles, geocoder, marker, GeoJSON circle
+  TimePicker.vue         # HH:mm popover picker (v-model string|null)
 
 resources/js/Pages/
   Auth/          # SignIn, SignUp, ForgotPassword, VerifyEmail
@@ -115,13 +121,13 @@ id, name, salary (decimal), is_tax (bool), type (fixed|hourly|presence|tax), cal
 mst_company_salary_id, mst_user_id, available_to_request (bool), included_at_default (bool)
 
 ### `trx_employee_requested_salary`
-id, pivot_employee_salary_id (FK), quantity, status (pending|approved|rejected), mst_approved_by (FK→mst_users), approved_date, is_realized (bool)
+id, mst_user_id (FK→mst_users), mst_company_salary_id (FK→mst_company_salary), quantity, quantity_snapshot, salary_snapshot, status (pending|approved|rejected), mst_approved_by (FK→mst_users), approved_date, is_realized (bool)
 
 ### `trx_salary_receipt`
 id, mst_user_id (FK), work_hour, total_salary, total_tax, salary_after_tax, total_presence_record, start_date, end_date, status (pending|approved|denied)
 
 ### `trx_salary_receipt_item`
-id, trx_salary_receipt_id (FK), mst_company_salary_id (FK), trx_employee_requested_salary_id (FK), quantity, total_value
+id, trx_salary_receipt_id (FK), mst_company_salary_id (FK), trx_employee_requested_salary_id (FK), quantity, total_value, salary_name_snapshot, salary_rate_snapshot
 
 ### `personal_access_tokens`
 Extended: device_name, device_type, device_token — Sanctum token untuk mobile apps
@@ -199,15 +205,27 @@ Extended: device_name, device_type, device_token — Sanctum token untuk mobile 
 - Admin approve → siap direalisasikan di slip gaji
 
 **Generate slip gaji (`calculateEmployeeSalary`):**
-1. Ambil presensi dalam periode → hitung total jam
+1. Ambil presensi dalam periode → hitung total jam (clamped `max(0, diffInHours)` — tidak negatif)
 2. Ambil komponen default (`included_at_default = true`)
 3. Ambil request yang approved & belum direalisasi
-4. Hitung tiap komponen berdasarkan type
+4. Hitung tiap komponen berdasarkan type. Snapshot nama (`salary_name_snapshot`) dan rate (`salary_rate_snapshot`) dibekukan dari master saat generate. Untuk requested item, `salary_rate_snapshot` pakai `salary_snapshot` dari request (bukan master).
 5. Tax = (total_sebelum_pajak × rate) / 100
 6. Simpan `SalaryReceipt` + `SalaryReceiptItem`
-7. Tandai request sebagai `is_realized = true`
+
+**Edit slip (`updatePayroll`):**
+- Update-in-place: load existing `SalaryReceiptItem` key-by `mst_company_salary_id`, update qty+total value langsung
+- Preserve `trx_employee_requested_salary_id` + snapshot dari DB (requested items read-only)
+- Item baru create dgn snapshot fresh dari master
+- Item yg dihapus admin → hard delete (tidak soft delete)
+- Tax dihitung 2-pass (sum add, calc tax, sum total)
+- Tidak panggil `calculateEmployeeSalary` lagi
+
+**Konfirmasi slip (confirmPayroll):**
+- Saat admin approve receipt → `is_realized = true` untuk semua request terlink
+- Snapshot memastikan nilai receipt tidak berubah walau master diedit
 
 **Status slip:** pending → approved/denied (admin via web)
+**Filter:** status (All/Pending/Approved/Denied), urut (Terbaru/Terlama)
 
 ### 5. Device Management
 - Admin lihat daftar employee + device aktif (Sanctum tokens)
@@ -220,6 +238,17 @@ Extended: device_name, device_type, device_token — Sanctum token untuk mobile 
 1. **Migration vs Model mismatch:** `presence_locations` punya `user_id` & `end_hour` di model tapi tidak di migration terbaru. State aktif DB menggunakan migration lama (obsolete).
 2. **"only-company" middleware** — awalnya role disebut `company`, lalu diubah jadi `superadmin`. Nama middleware tidak diupdate. Sekarang hanya `isSuper()` yang lolos, role `company` biasa tidak bisa lewat sini.
 3. **Routing:** Semua route via YALR attribute di controller. `routes/web.php` & `routes/auth.php` hampir tidak dipakai.
-4. **Karyawan tidak bisa akses web** — didesain: admin via web SPA, employee via mobile app.
-5. **Tidak ada service class** — semua logika di controller (termasuk kalkulasi 150 baris di `CompanyPayrollReceiptController`).
-6. **`is_admin` bukan kolom DB** — hanya flag di form create akun (`$request->is_admin`) untuk menentukan type: `true → 'company'`, `false/null → 'employee'`. Otorisasi cukup dari kolom `type` + `is_suspended`. Tabel `app_menus`/`role_permission` ada tapi tidak dipakai.
+4. **Hanya `fixed` type yang bisa di-request:** Type `hourly` & `presence` tidak bisa di-request karyawan karena kuantitasnya ditentukan oleh jam kerja / jumlah presensi otomatis, bukan oleh quantity request.
+5. **Karyawan tidak bisa akses web** — didesain: admin via web SPA, employee via mobile app.
+6. **Tidak ada service class** — semua logika di controller (termasuk kalkulasi 150 baris di `CompanyPayrollReceiptController`).
+7. **`is_admin` bukan kolom DB** — hanya flag di form create akun (`$request->is_admin`) untuk menentukan type: `true → 'company'`, `false/null → 'employee'`. Otorisasi cukup dari kolom `type` + `is_suspended`. Tabel `app_menus`/`role_permission` ada tapi tidak dipakai.
+8. **Date format: kirim `YYYY-MM-DD`** — `.toString()` dari CalendarDate, bukan `.toDate()`. Hindari timezone shift JS Date. Model `SalaryReceipt` casts `start_date`/`end_date` sbg `'date'` → output konsisten `"2026-06-01"`.
+9. **Work hours ≥ 0** — `diffInHours` di-wrap `max(0, ...)` di CompanyPayrollReceiptController (generate + edit) dan PrensenceApiController (checkout). Cegah work hour negatif.
+10. **`trx_salary_receipt_item` hard delete** — trait `SoftDeletes` dihapus. `delete()` langsung hard delete. Snapshot jadi audit trail.
+11. **Checkout diffInHours fix** — dulu: compare `time_out` dgn `time_out` sendiri → logika `$isLimit`/`$isEarlier` selalu salah. Skrg: compare `time_in` (history) dgn `time_out` (Carbon::now()).
+12. **Map: TomTom v6 → maplibre-gl** — TomTom SDK deprecated. MapView.vue pake maplibre-gl + TomTom Map Display API tile endpoint. TomTom Search API via `@maplibre/maplibre-gl-geocoder` custom `forwardGeocode` adapter (rest fetch).
+13. **TomTom Map Display API style URL** — Format: `https://api.tomtom.com/map/1/style/{version}/{style}.json?key=...` (bukan `style/1/style/...` — Invalid version format). Versi terakhir `25.2.3-0`, style `basic_main.json`.
+14. **TomTom Search API field `position.lon`** — Bukan `position.lng`. Mapping di `forwardGeocode` harus `[r.position.lon, r.position.lat]`.
+15. **Geocoder `flyTo: false`** — Geocoder internal `flyTo` fires sebelum `result` event. Harus `flyTo: false` di options, explicit `globalMap.flyTo()` di `result` event handler.
+16. **Geolokasi di parent, bukan MapView** — MapView tidak punya konteks create vs edit mode. Parent `PresenceLocationDetail.vue` handle geolokasi via `tryOnBeforeMount(() => { if(dataFromServer) return; getCurrentLocation() })`. MapView cuma punya tombol "Get my location" manual (maplibre IControl di top-right).
+17. **`max_hour` di form PresenceLocation adalah TIME string** — Bukan number. Default `null`, harus diisi via TimePicker (format `"HH:mm"`). Jangan set number (crash `value.split()` di TimePicker).

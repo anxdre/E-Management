@@ -37,16 +37,12 @@ class CompanySalarySeeder extends Seeder
 
         $this->assignSalary(User::where('email', 'rudi@email.com')->first(),   'Tunjangan Makan', true, false);
         $this->assignSalary(User::where('email', 'agus@email.com')->first(),   'Tunjangan Makan', true, false);
-        $this->assignSalary(User::where('email', 'agus@email.com')->first(),   'Uang Lembur', false, true);
-        $this->assignSalary(User::where('email', 'hendra@email.com')->first(), 'Tunjangan Makan', false, true);
-        $this->assignSalary(User::where('email', 'dimas@email.com')->first(),  'Uang Lembur', false, true);
         $this->assignSalary(User::where('email', 'dewi@email.com')->first(),   'Tunjangan Makan', true, false);
-        $this->assignSalary(User::where('email', 'rina@email.com')->first(),   'Uang Lembur', false, true);
-        $this->assignSalary(User::where('email', 'rina@email.com')->first(),   'Tunjangan Makan', false, true);
         $this->assignSalary(User::where('email', 'indah@email.com')->first(),  'Tunjangan Makan', true, false);
-        $this->assignSalary(User::where('email', 'andi@email.com')->first(),   'Uang Lembur', false, true);
         $this->assignSalary(User::where('email', 'fitri@email.com')->first(),  'Tunjangan Makan', true, false);
-        $this->assignSalary(User::where('email', 'fitri@email.com')->first(),  'Uang Lembur', false, true);
+        $this->assignSalary(User::where('email', 'agus@email.com')->first(),   'Tunjangan Transportasi', false, true);
+        $this->assignSalary(User::where('email', 'rina@email.com')->first(),   'Tunjangan Transportasi', false, true);
+        $this->assignSalary(User::where('email', 'andi@email.com')->first(),   'Tunjangan Transportasi', false, true);
 
         $createRequest = function ($email, $componentName, $quantity, $status) use ($companyUser) {
             $user = User::where('email', $email)->first();
@@ -57,6 +53,8 @@ class CompanySalarySeeder extends Seeder
                     'mst_user_id' => $user->id,
                     'mst_company_salary_id' => $salary->id,
                     'quantity' => $quantity,
+                    'quantity_snapshot' => $quantity,
+                    'salary_snapshot' => $salary->salary,
                     'status' => $status,
                     'mst_approved_by' => $status === 'approved' ? $companyUser->id : null,
                     'approved_date' => $status === 'approved' ? now()->subDays(5) : null,
@@ -65,9 +63,9 @@ class CompanySalarySeeder extends Seeder
             }
         };
 
-        $createRequest('agus@email.com', 'Uang Lembur', 20, 'approved');
-        $createRequest('rina@email.com', 'Tunjangan Makan', 5, 'approved');
-        $createRequest('andi@email.com', 'Uang Lembur', 10, 'pending');
+        $createRequest('agus@email.com', 'Tunjangan Transportasi', 20, 'approved');
+        $createRequest('rina@email.com', 'Tunjangan Transportasi', 5, 'approved');
+        $createRequest('andi@email.com', 'Tunjangan Transportasi', 10, 'pending');
     }
 
     private function assignSalary(User $user, string $componentName, bool $default, bool $requestable): void

@@ -72,6 +72,14 @@ class CompanyPayrollReceiptController extends Controller
                 $endDate = Carbon::parse($request->date_filter['end']);
                 $query->whereBetween('start_date', [$startDate, $endDate]);
             })
+            ->when($request->filled('status'), function ($query) use ($request) {
+                $query->where('status', $request->status);
+            })
+            ->when($request->filled('order_by'), function ($query) use ($request) {
+                $query->orderBy('created_at', $request->order_by === 'oldest' ? 'asc' : 'desc');
+            }, function ($query) {
+                $query->orderBy('created_at', 'desc');
+            })
             ->paginate(10)
             ->withQueryString();
 
@@ -117,12 +125,9 @@ class CompanyPayrollReceiptController extends Controller
                         'quantity' => $component['quantity'],
                         'total_value' => $component['total_ammount'],
                         'trx_employee_requested_salary_id' => $component['trx_employee_requested_salary_id'] ?? null,
+                        'salary_name_snapshot' => $component['salary_name_snapshot'] ?? null,
+                        'salary_rate_snapshot' => $component['salary_rate_snapshot'] ?? null,
                     ]);
-
-                    if ($component['trx_employee_requested_salary_id'] ?? null) {
-                        EmployeeRequestedSalary::where('id', $component['trx_employee_requested_salary_id'])
-                            ->update(['is_realized' => true]);
-                    }
                 });
             });
             DB::commit();
@@ -155,7 +160,7 @@ class CompanyPayrollReceiptController extends Controller
             if ($record->time_in && $record->time_out) {
                 $checkIn = Carbon::parse($record->time_in);
                 $checkOut = Carbon::parse($record->time_out);
-                $hoursWorked = $checkOut->diffInHours($checkIn);
+                $hoursWorked = max(0, $checkOut->diffInHours($checkIn));
                 $totalWorkHours += $hoursWorked;
             }
         }
@@ -220,7 +225,9 @@ class CompanyPayrollReceiptController extends Controller
                     'type' => $component->type,
                     'quantity' => $calculatedComponent->quantity,
                     'total_ammount' => $calculatedComponent->totalSalary,
-                    'calculation_type' => $component->calculation_type
+                    'calculation_type' => $component->calculation_type,
+                    'salary_name_snapshot' => $component->name,
+                    'salary_rate_snapshot' => $component->salary,
                 ];
             }
         }
@@ -240,6 +247,8 @@ class CompanyPayrollReceiptController extends Controller
                         'rate' => $calculatedComponent->totalSalary, // Tax rate in percentage
                         'base_amount' => $calculatedComponent->salary,
                         'trx_employee_requested_salary_id' => $requestedSalary->id,
+                        'salary_name_snapshot' => $component->name,
+                        'salary_rate_snapshot' => $requestedSalary->salary_snapshot ?? $component->salary,
                     ];
                 } else {
                     // Add or subtract based on calculation type
@@ -257,6 +266,8 @@ class CompanyPayrollReceiptController extends Controller
                         'total_ammount' => $calculatedComponent->totalSalary,
                         'calculation_type' => $component->calculation_type,
                         'trx_employee_requested_salary_id' => $requestedSalary->id,
+                        'salary_name_snapshot' => $component->name,
+                        'salary_rate_snapshot' => $requestedSalary->salary_snapshot ?? $component->salary,
                     ];
                 }
             }
@@ -274,7 +285,9 @@ class CompanyPayrollReceiptController extends Controller
                 'quantity' => $taxComponent['quantity'],
                 'total_ammount' => $taxAmount,
                 'percentage' => $taxComponent['rate'],
-                'calculation_type' => 'subtract'
+                'calculation_type' => 'subtract',
+                'salary_name_snapshot' => $taxComponent['name'] ?? null,
+                'salary_rate_snapshot' => $taxComponent['rate'] ?? null,
             ];
         }
 
@@ -363,37 +376,136 @@ class CompanyPayrollReceiptController extends Controller
 
         try {
             DB::transaction(function () use ($request, $salaryReceipt, $user) {
-                // Calculate updated salary data
-                $calculatedData = $this->calculateEmployeeSalary($user, $request->start_date, $request->end_date, $request->company_salary_item);
+                $startDate = Carbon::parse($request->start_date);
+                $endDate = Carbon::parse($request->end_date);
+
+                // Load existing items keyed by mst_company_salary_id
+                $existingItems = SalaryReceiptItem::where('trx_salary_receipt_id', $salaryReceipt->id)
+                    ->get()
+                    ->keyBy('mst_company_salary_id');
+
+                // Calculate presence data for hourly/presence types
+                $presenceRecords = $user->presence()
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->get();
+
+                $totalWorkHours = 0;
+                $presenceCount = 0;
+                foreach ($presenceRecords as $record) {
+                    if ($record->time_in && $record->time_out) {
+                        $checkIn = Carbon::parse($record->time_in);
+                        $checkOut = Carbon::parse($record->time_out);
+                        $hoursWorked = max(0, $checkOut->diffInHours($checkIn));
+                        $totalWorkHours += $hoursWorked;
+                        $presenceCount++;
+                    }
+                }
+
+                $totalPresenceRecord = $presenceRecords->count();
+
+                // First pass: process non-tax components
+                $nonTaxTotal = 0;
+                $processedIds = [];
+                $taxComponents = [];
+
+                foreach ($request->company_salary_item as $item) {
+                    $componentId = $item['id'];
+                    $dataComponent = CompanySalary::query()->find($componentId);
+                    if (!$dataComponent) {
+                        continue;
+                    }
+                    $processedIds[] = $componentId;
+                    $match = $existingItems->get($componentId);
+
+                    // Preserve snapshot & requested_salary_id for existing items
+                    $rateSnapshot = $match ? $match->salary_rate_snapshot : $dataComponent->salary;
+                    $nameSnapshot = $match ? $match->salary_name_snapshot : $dataComponent->name;
+                    $requestedSalaryId = $match ? $match->trx_employee_requested_salary_id : null;
+
+                    if ($dataComponent->is_tax) {
+                        $quantity = $match ? $match->quantity : ($item['quantity'] ?? 1);
+                        $taxComponents[] = compact('componentId', 'quantity', 'rateSnapshot', 'nameSnapshot', 'requestedSalaryId', 'dataComponent');
+                        continue;
+                    }
+
+                    // Calculate quantity and total value based on type
+                    switch ($dataComponent->type) {
+                        case 'fixed':
+                            $quantity = $item['quantity'] ?? ($match ? $match->quantity : 1);
+                            $totalValue = $rateSnapshot * $quantity;
+                            break;
+                        case 'hourly':
+                            $quantity = $totalWorkHours;
+                            $totalValue = $rateSnapshot * $totalWorkHours;
+                            break;
+                        case 'presence':
+                            $quantity = $presenceCount;
+                            $totalValue = $rateSnapshot * $presenceCount;
+                            break;
+                        default:
+                            $quantity = 1;
+                            $totalValue = 0;
+                    }
+
+                    $nonTaxTotal += $dataComponent->calculation_type === 'subtract' ? -$totalValue : $totalValue;
+
+                    if ($match) {
+                        $match->update([
+                            'quantity' => $quantity,
+                            'total_value' => $totalValue,
+                        ]);
+                    } else {
+                        SalaryReceiptItem::create([
+                            'trx_salary_receipt_id' => $salaryReceipt->id,
+                            'mst_company_salary_id' => $componentId,
+                            'quantity' => $quantity,
+                            'total_value' => $totalValue,
+                            'trx_employee_requested_salary_id' => $requestedSalaryId,
+                            'salary_name_snapshot' => $nameSnapshot,
+                            'salary_rate_snapshot' => $rateSnapshot,
+                        ]);
+                    }
+                }
+
+                // Second pass: process tax components
+                $totalTax = 0;
+                foreach ($taxComponents as $tax) {
+                    $taxAmount = $nonTaxTotal * $tax['rateSnapshot'] / 100;
+                    $totalTax += $taxAmount;
+
+                    if ($match = $existingItems->get($tax['componentId'])) {
+                        $match->update([
+                            'quantity' => $tax['quantity'],
+                            'total_value' => $taxAmount,
+                        ]);
+                    } else {
+                        SalaryReceiptItem::create([
+                            'trx_salary_receipt_id' => $salaryReceipt->id,
+                            'mst_company_salary_id' => $tax['componentId'],
+                            'quantity' => $tax['quantity'],
+                            'total_value' => $taxAmount,
+                            'trx_employee_requested_salary_id' => $tax['requestedSalaryId'],
+                            'salary_name_snapshot' => $tax['nameSnapshot'],
+                            'salary_rate_snapshot' => $tax['rateSnapshot'],
+                        ]);
+                    }
+                }
+
+                // Delete items removed by admin (no longer in request)
+                SalaryReceiptItem::where('trx_salary_receipt_id', $salaryReceipt->id)
+                    ->whereNotIn('mst_company_salary_id', $processedIds)
+                    ->delete();
+
                 // Update main receipt
                 $salaryReceipt->update([
-                    'work_hour' => $calculatedData['work_hours'],
-                    'start_date' => Carbon::parse($request->start_date),
-                    'end_date' => Carbon::parse($request->end_date),
-                    'total_salary' => $calculatedData['total_salary'],
-                    'salary_after_tax' => $calculatedData['salary_after_tax'],
-                    'total_tax' => $calculatedData['total_tax'],
-                    'total_presence_record' => $calculatedData['total_presence_record'],
+                    'work_hour' => $totalWorkHours,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'total_salary' => $nonTaxTotal,
+                    'salary_after_tax' => $nonTaxTotal - $totalTax,
+                    'total_tax' => $totalTax,
+                    'total_presence_record' => $totalPresenceRecord,
                 ]);
-
-                // Delete existing receipt items
-                SalaryReceiptItem::where('trx_salary_receipt_id', $salaryReceipt->id)->delete();
-
-                // Create new receipt items based on calculated components
-                collect($calculatedData['salary_components'])->each(function ($component) use ($salaryReceipt) {
-                    SalaryReceiptItem::create([
-                        'trx_salary_receipt_id' => $salaryReceipt->id,
-                        'mst_company_salary_id' => $component['id'],
-                        'quantity' => $component['quantity'],
-                        'total_value' => $component['total_ammount'],
-                        'trx_employee_requested_salary_id' => $component['trx_employee_requested_salary_id'] ?? null,
-                    ]);
-
-                    if ($component['trx_employee_requested_salary_id'] ?? null) {
-                        EmployeeRequestedSalary::where('id', $component['trx_employee_requested_salary_id'])
-                            ->update(['is_realized' => true]);
-                    }
-                });
             });
         } catch (\Exception $exception) {
             return new JsonBody(null, message: $exception->getMessage(), status_code: 500);
@@ -427,6 +539,16 @@ class CompanyPayrollReceiptController extends Controller
         $salaryReceipt->update([
             'status' => $request->status ? 'approved' : 'denied',
         ]);
+
+        if ($request->status) {
+            $requestIds = SalaryReceiptItem::where('trx_salary_receipt_id', $salaryReceipt->id)
+                ->whereNotNull('trx_employee_requested_salary_id')
+                ->pluck('trx_employee_requested_salary_id');
+
+            EmployeeRequestedSalary::whereIn('id', $requestIds)
+                ->where('is_realized', false)
+                ->update(['is_realized' => true]);
+        }
 
         return new JsonBody(null, message: 'Company payroll ' . ($request->status ? 'approved' : 'rejected') . ' successfully');
     }

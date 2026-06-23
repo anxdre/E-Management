@@ -56,8 +56,10 @@ All routes defined via YALR attributes in controllers. `routes/web.php` only ser
 ### Payroll
 - Salary components: `fixed`, `hourly`, `presence`, `tax` with `add`/`subtract` calculation
 - Components assigned to employees via pivot with `included_at_default` / `available_to_request` flags
-- Employees can request additional components (mobile) → admin approval
+- Employees can request additional components (mobile) → admin approval (optional quantity override)
 - Salary receipt auto-calculated: work hours from presence records + default components + approved requests
+- Snapshots: component name & rate frozen at generation time (`salary_name_snapshot`, `salary_rate_snapshot`), original request quantity frozen (`quantity_snapshot`, `salary_snapshot`)
+- Request `is_realized` set when receipt is approved (not at generation)
 - Tax = percentage of total before tax
 - PDF/Excel export
 
@@ -138,5 +140,9 @@ Laravel evaluates all scheduled tasks internally (`->daily()`, `->everyMinute()`
 ## Notes
 
 - `only-company` middleware checks `isSuper()` (not `isCompany()`), superadmin-only
-- Migration/model mismatches exist for `presence_locations` — DB uses older schema
 - No service classes; business logic in controllers
+- Snapshot columns (`_snapshot` suffix) freeze master values at transaction time — edits to master after receipt generation do not retroactively change issued receipts.
+- Only `fixed` type salary components are requestable — `hourly` and `presence` types are excluded because their quantity is determined by work hours / presence count
+- `trx_salary_receipt_item` uses hard delete (no soft deletes) to prevent bloat on receipt edits; snapshot columns serve as the audit trail
+- All date params use `YYYY-MM-DD` strings (`.toString()`), no timezone conversion
+- Work hours clamped to `max(0, diffInHours)` — never negative
