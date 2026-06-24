@@ -20,7 +20,7 @@ trait MobileDecryptor
     function decodeDeviceToken(string $encryptedToken): ?array
     {
         try {
-            $step1 = $this->decryptAES($encryptedToken, env('MOBILE_KEY'));
+            $step1 = $this->decryptAES($encryptedToken, config('app.mobile_key'));
             $step2 = decrypt($step1);
 
             $parts = explode('-', $step2);

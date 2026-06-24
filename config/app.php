@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'mobile_key' => env('MOBILE_KEY'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

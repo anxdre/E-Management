@@ -39,7 +39,7 @@ class AuthApiController extends Controller
         ]);
 
         $dataToken = $this->decodeDeviceToken($request->device_token);
-        if (!$dataToken || $dataToken['prefix'] !== env('APP_NAME')) {
+        if (!$dataToken || $dataToken['prefix'] !== config('app.name')) {
             return response()->json(['message' => 'Invalid App credentials'], 401);
         }
 
@@ -124,7 +124,7 @@ class AuthApiController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        $prefix = env('APP_NAME');
+        $prefix = config('app.name');
         $date = Carbon::now()->format('Ymd');
         $token = encrypt($prefix . '-' . $date . '-' . $user->id);
 
