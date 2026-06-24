@@ -16,6 +16,7 @@ if ! grep -q "^APP_KEY=[^ ]" .env 2>/dev/null; then
 fi
 
 php artisan storage:link --force 2>/dev/null || true
+mkdir -p storage/app/mpdf-tmp && chown www-data:www-data storage/app/mpdf-tmp
 php artisan migrate --force --seed 2>/dev/null || true
 php artisan optimize 2>/dev/null || true
 

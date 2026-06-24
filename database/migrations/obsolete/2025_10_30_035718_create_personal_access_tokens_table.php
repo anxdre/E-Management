@@ -23,8 +23,8 @@ return new class extends Migration
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
             $table->string('device_name')->nullable();
-            $table->string('device_type')->nullable();
-            $table->string('device_token')->nullable()->unique();
+            $table->string('device_type',512)->nullable();
+            $table->string('device_token',512)->nullable()->unique();
 
             $table->index(['tokenable_type', 'tokenable_id']);
         });

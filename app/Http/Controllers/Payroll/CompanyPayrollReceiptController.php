@@ -616,6 +616,7 @@ class CompanyPayrollReceiptController extends Controller
             'margin_bottom' => 10,
             'margin_left' => 15,
             'margin_right' => 15,
+            'tempDir' => storage_path('app/mpdf-tmp'),
         ]);
         $mpdf->WriteHTML($html);
 
