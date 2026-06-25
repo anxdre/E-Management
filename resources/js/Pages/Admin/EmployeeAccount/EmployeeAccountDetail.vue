@@ -6,8 +6,11 @@ import { vAutoAnimate } from "@formkit/auto-animate";
 import { useForm } from "vee-validate";
 import {computed, onMounted, ref, useAttrs} from "vue";
 import { Input } from "@/shadcn/ui/input";
+import { Badge } from "@/shadcn/ui/badge";
 import { Button } from "@/shadcn/ui/button";
-import { ChevronLeft, LoaderCircleIcon, MapPinCheck, NotepadText, PencilIcon } from "lucide-vue-next";
+import { Checkbox } from "@/shadcn/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shadcn/ui/table";
+import { ChevronLeft, LoaderCircleIcon, MapPinCheck, NotepadText, PencilIcon, X } from "lucide-vue-next";
 import axios from "axios";
 import { cn, errorToast, navigateLink, PhoneRegex, successToast } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shadcn/ui/card";
@@ -148,7 +151,114 @@ onMounted(() => {
             profileImage.value = `${import.meta.env.VITE_APP_URL}/storage/${imgPath}`;
         }
     }
+    fetchSalarySettings()
 })
+
+const salaryData = ref<{ all_salaries: any[], employee_salaries: any[] } | null>(null)
+const salaryLoading = ref(false)
+const savingSalaryId = ref<number | null>(null)
+const localStates = ref<Record<number, { included_at_default: boolean; available_to_request: boolean }>>({})
+
+const employeeSalaryIds = computed(() => {
+    if (!salaryData.value) return new Set<number>()
+    return new Set(salaryData.value.employee_salaries.map((s: any) => s.id))
+})
+
+function fetchSalarySettings() {
+    if (!props.account?.id || isCompanyUser.value) return
+    salaryLoading.value = true
+    axios.get(route('employee-account.json.employee.salary', { user: props.account.id }))
+        .then(({ data: { data: dataFromServer } }) => {
+            salaryData.value = dataFromServer
+            localStates.value = {}
+        })
+        .catch((err) => {
+            errorToast('Error !', err.response?.data?.message || 'Gagal memuat data gaji')
+        })
+        .finally(() => {
+            salaryLoading.value = false
+        })
+}
+
+function getLocalState(salaryId: number) {
+    if (!localStates.value[salaryId]) {
+        const pivot = salaryData.value?.employee_salaries.find((s: any) => s.id === salaryId)?.pivot
+        localStates.value[salaryId] = {
+            included_at_default: pivot?.included_at_default ?? false,
+            available_to_request: pivot?.available_to_request ?? false,
+        }
+    }
+    return localStates.value[salaryId]
+}
+
+function hasPivotChanged(salaryId: number) {
+    const local = localStates.value[salaryId]
+    if (!local) return false
+    const pivot = salaryData.value?.employee_salaries.find((s: any) => s.id === salaryId)?.pivot
+    if (!pivot) return true
+    return local.included_at_default !== pivot.included_at_default
+        || local.available_to_request !== pivot.available_to_request
+}
+
+function attachSalary(salaryId: number) {
+    savingSalaryId.value = salaryId
+    axios.put(route('employee-account.json.employee.salary.update', { user: props.account.id }), {
+        company_salary_id: salaryId,
+        action: 'attach',
+        included_at_default: false,
+        available_to_request: false,
+    })
+        .then(({ data: { message } }) => {
+            successToast('Success', message)
+            fetchSalarySettings()
+        })
+        .catch((err) => {
+            errorToast('Error !', err.response?.data?.message || 'Gagal')
+        })
+        .finally(() => {
+            savingSalaryId.value = null
+        })
+}
+
+function detachSalary(salaryId: number) {
+    savingSalaryId.value = salaryId
+    axios.put(route('employee-account.json.employee.salary.update', { user: props.account.id }), {
+        company_salary_id: salaryId,
+        action: 'detach',
+    })
+        .then(({ data: { message } }) => {
+            successToast('Success', message)
+            fetchSalarySettings()
+        })
+        .catch((err) => {
+            errorToast('Error !', err.response?.data?.message || 'Gagal')
+        })
+        .finally(() => {
+            savingSalaryId.value = null
+        })
+}
+
+function saveSalary(salaryId: number) {
+    const state = localStates.value[salaryId]
+    if (!state) return
+    savingSalaryId.value = salaryId
+    axios.put(route('employee-account.json.employee.salary.update', { user: props.account.id }), {
+        company_salary_id: salaryId,
+        action: 'update',
+        included_at_default: state.included_at_default,
+        available_to_request: state.available_to_request,
+    })
+        .then(({ data: { message } }) => {
+            successToast('Success', message)
+            fetchSalarySettings()
+        })
+        .catch((err) => {
+            errorToast('Error !', err.response?.data?.message || 'Gagal')
+        })
+        .finally(() => {
+            savingSalaryId.value = null
+        })
+}
 
 </script>
 
@@ -422,6 +532,75 @@ onMounted(() => {
             </CardContent>
             <CardFooter>
             </CardFooter>
+        </Card>
+        <Card v-if="props.account && !isCompanyUser && !isCreate" class="overflow-scroll">
+            <CardHeader>
+                <CardTitle>Salary Settings</CardTitle>
+                <CardDescription>Manage salary components for this employee</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div v-if="salaryLoading" class="w-full inline-flex justify-center animate-pulse py-8">
+                    <LoaderCircleIcon class="size-10 animate-spin"/>
+                </div>
+                <Table v-else-if="salaryData">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead class="text-center">Default</TableHead>
+                            <TableHead class="text-center">Can Request</TableHead>
+                            <TableHead class="text-center">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow v-for="salary in salaryData.all_salaries" :key="salary.id">
+                            <TableCell class="font-medium">{{ salary.name }}</TableCell>
+                            <TableCell>
+                                <Badge variant="outline">{{ salary.type }}</Badge>
+                            </TableCell>
+                            <TableCell>
+                                <span v-if="salary.is_tax">{{ salary.salary }}%</span>
+                                <span v-else>{{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(salary.salary) }}</span>
+                            </TableCell>
+                            <TableCell class="text-center">
+                                <Checkbox v-if="employeeSalaryIds.has(salary.id)"
+                                    :modelValue="getLocalState(salary.id).included_at_default"
+                                    @update:modelValue="(val) => { getLocalState(salary.id).included_at_default = val }" />
+                            </TableCell>
+                            <TableCell class="text-center">
+                                <Checkbox v-if="employeeSalaryIds.has(salary.id)"
+                                    :modelValue="getLocalState(salary.id).available_to_request"
+                                    @update:modelValue="(val) => { getLocalState(salary.id).available_to_request = val }" />
+                            </TableCell>
+                            <TableCell class="text-center">
+                                <Button v-if="!employeeSalaryIds.has(salary.id)" size="sm" variant="outline"
+                                    @click="attachSalary(salary.id)"
+                                    :disabled="savingSalaryId === salary.id">
+                                    Attach
+                                </Button>
+                                <div v-else class="inline-flex gap-1 justify-center">
+                                    <Button size="sm"
+                                        @click="saveSalary(salary.id)"
+                                        :disabled="savingSalaryId === salary.id || !hasPivotChanged(salary.id)">
+                                        Save
+                                    </Button>
+                                    <Button size="sm" variant="outline" class="text-destructive"
+                                        @click="detachSalary(salary.id)"
+                                        :disabled="savingSalaryId === salary.id">
+                                        <X class="h-3 w-3"/>
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                        <TableRow v-if="salaryData.all_salaries.length === 0">
+                            <TableCell colspan="6" class="text-center text-muted-foreground">
+                                No salary component available
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </CardContent>
         </Card>
     </main>
 </template>

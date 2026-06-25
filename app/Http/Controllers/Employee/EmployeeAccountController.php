@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JsonBody;
 use App\Models\CompanyProfile;
+use App\Models\Payroll\CompanySalary;
 use App\Models\UserManagement\CompanyGroup;
 use App\Models\UserManagement\User;
 use App\Models\UserManagement\UserDetail;
@@ -14,6 +15,7 @@ use Dentro\Yalr\Attributes\Middleware;
 use Dentro\Yalr\Attributes\Name;
 use Dentro\Yalr\Attributes\Post;
 use Dentro\Yalr\Attributes\Prefix;
+use Dentro\Yalr\Attributes\Put;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -268,5 +270,47 @@ class EmployeeAccountController extends Controller
         }
 
         return new JsonBody(null, message: 'Account deleted successfully');
+    }
+
+    #[Get('/{user}/salary/json', '.json.employee.salary', ['scope-company'])]
+    public function employeeSalaryJson(int $id)
+    {
+        $user = User::query()->findOrFail($id);
+        $user->load('salaries');
+        $allSalaries = CompanySalary::all();
+
+        return new JsonBody([
+            'all_salaries' => $allSalaries,
+            'employee_salaries' => $user->salaries,
+        ]);
+    }
+
+    #[Put('/{user}/salary/update/json', '.json.employee.salary.update', ['scope-company'])]
+    public function employeeSalaryUpdate(Request $request, int $id)
+    {
+        $request->validate([
+            'company_salary_id' => 'required|exists:mst_company_salary,id',
+            'action' => 'required|in:attach,detach,update',
+            'included_at_default' => 'nullable|boolean',
+            'available_to_request' => 'nullable|boolean',
+        ]);
+
+        $user = User::query()->findOrFail($id);
+
+        match ($request->action) {
+            'attach' => $user->salaries()->syncWithoutDetaching([
+                $request->company_salary_id => [
+                    'included_at_default' => $request->boolean('included_at_default'),
+                    'available_to_request' => $request->boolean('available_to_request'),
+                ]
+            ]),
+            'detach' => $user->salaries()->detach($request->company_salary_id),
+            'update' => $user->salaries()->updateExistingPivot($request->company_salary_id, [
+                'included_at_default' => $request->boolean('included_at_default'),
+                'available_to_request' => $request->boolean('available_to_request'),
+            ]),
+        };
+
+        return new JsonBody(null, message: 'Salary updated successfully');
     }
 }

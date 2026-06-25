@@ -20,9 +20,16 @@ class RequestSalaryApiController extends Controller
     #[Get('{user}/api/available-components', '.api.available-components')]
     public function getAvailableComponents(User $user)
     {
+        $alreadyRequestedIds = EmployeeRequestedSalary::query()
+            ->where('mst_user_id', $user->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->where('is_realized', false)
+            ->pluck('mst_company_salary_id');
+
         $components = CompanySalary::query()
             ->whereHas('employeeSalary', fn($q) => $q->where('mst_user_id', $user->id)->where('available_to_request', true))
             ->whereNotIn('type', ['hourly', 'presence'])
+            ->whereNotIn('id', $alreadyRequestedIds)
             ->get();
 
         return new JsonBody($components);
@@ -40,7 +47,7 @@ class RequestSalaryApiController extends Controller
         $existing = EmployeeRequestedSalary::query()
             ->where('mst_user_id', $request->mst_user_id)
             ->where('mst_company_salary_id', $request->mst_company_salary_id)
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'approved'])
             ->where('is_realized', false)
             ->first();
 
