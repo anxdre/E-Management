@@ -36,6 +36,23 @@ class EmployeePayrollTypeController extends Controller
         return Inertia::render('Admin/ReceiptDetail/ReceiptDetail', ['id' => $payroll]);
     }
 
+    #[Get('/payroll/{payroll}/employee/{employee}/requested-items/json', '.json.requested-items')]
+    public function getEmployeeRequestedItems(User $user, int $payroll, User $employee)
+    {
+        $existingIds = SalaryReceiptItem::where('trx_salary_receipt_id', $payroll)
+            ->pluck('mst_company_salary_id');
+
+        $items = EmployeeRequestedSalary::query()
+            ->with(['component', 'approvedBy.userDetail'])
+            ->where('mst_user_id', $employee->id)
+            ->where('status', 'approved')
+            ->where('is_realized', false)
+            ->whereNotIn('mst_company_salary_id', $existingIds)
+            ->get();
+
+        return new JsonBody($items);
+    }
+
     #[Get('/payroll/{payroll}/detail/json', '.json.detail')]
     public function detailReceiptJson(User $user,int $payroll, Request $request)
     {
