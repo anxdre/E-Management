@@ -12,8 +12,8 @@ class PresenceEmployee extends Model
     protected $table = 'trx_presence_employees';
     protected $guarded = ['id'];
     protected $casts = [
-        'time_in' => 'datetime:UTC',
-        'time_out' => 'datetime:UTC',
+        'time_in' => 'datetime',
+        'time_out' => 'datetime',
     ];
 
     function presenceVerification()
