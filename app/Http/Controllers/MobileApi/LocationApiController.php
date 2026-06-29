@@ -22,9 +22,17 @@ class LocationApiController extends Controller
     {
         $user = Auth::user();
 
-        $companyId = $user->isEmployee()
-            ? $user->groups()->first()?->mst_user_id
-            : $user->id;
+        if ($user->isEmployee()) {
+            // Primary: find company through employee's groups (mst_user_id on CompanyGroup)
+            $companyId = $user->groups()->first()?->mst_user_id;
+
+            // Fallback: single-company mode — use the first company-type user
+            if (!$companyId) {
+                $companyId = User::where('type', 'company')->value('id');
+            }
+        } else {
+            $companyId = $user->id;
+        }
 
         $data = PresenceLocation::query()
             ->where('mst_user_id', $companyId)
