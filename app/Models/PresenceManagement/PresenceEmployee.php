@@ -11,6 +11,10 @@ class PresenceEmployee extends Model
     use HasFactory;
     protected $table = 'trx_presence_employees';
     protected $guarded = ['id'];
+    protected $casts = [
+        'time_in' => 'datetime',
+        'time_out' => 'datetime',
+    ];
 
     function presenceVerification()
     {
