@@ -569,9 +569,10 @@ function saveSalary(salaryId: number) {
                                     @update:modelValue="(val) => { getLocalState(salary.id).included_at_default = val }" />
                             </TableCell>
                             <TableCell class="text-center">
-                                <Checkbox v-if="employeeSalaryIds.has(salary.id)"
+                                <Checkbox v-if="employeeSalaryIds.has(salary.id) && salary.type === 'fixed'"
                                     :modelValue="getLocalState(salary.id).available_to_request"
                                     @update:modelValue="(val) => { getLocalState(salary.id).available_to_request = val }" />
+                                <span v-else-if="employeeSalaryIds.has(salary.id) && salary.type !== 'fixed'" class="text-xs text-muted-foreground">Not available</span>
                             </TableCell>
                             <TableCell class="text-center">
                                 <Button v-if="!employeeSalaryIds.has(salary.id)" size="sm" variant="outline"

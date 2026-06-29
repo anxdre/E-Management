@@ -761,7 +761,7 @@ onMounted(async () => {
                                 {{ dayjs(data.time_in).format('HH:mm:ss') || '-' }}
                             </TableCell>
                             <TableCell class="font-medium">
-                                {{ dayjs(data.time_out).format('HH:mm:ss') || '-' }}
+                                {{ data.time_out ? dayjs(data.time_out).format('HH:mm:ss') : '-' }}
                             </TableCell>
                             <TableCell class="font-medium">
                                 {{ formatWorkingHour(data.time_in, data.time_out) || '-' }}
