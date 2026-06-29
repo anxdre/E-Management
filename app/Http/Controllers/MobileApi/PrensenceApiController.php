@@ -156,7 +156,7 @@ class PrensenceApiController
                     $employeePresence->note .= "\n\n*Late check in !, need admin verification";
                 }
             }
-            $employeePresence->time_in = Carbon::now();
+            $employeePresence->time_in = Carbon::now('UTC');
         }
 
         if ($request->status == 'out' && $user->isEmployee()) {
@@ -164,7 +164,7 @@ class PrensenceApiController
                 return new JsonBody([], 'Data check-in tidak terdeteksi', 403);
             }
 
-            $employeePresence->time_out = Carbon::now();
+            $employeePresence->time_out = Carbon::now('UTC');
             $employeePresence->id = $historyAttendance->id;
             $timeIn = Carbon::parse($historyAttendance->time_in);
             $isLimit = false;
@@ -184,7 +184,7 @@ class PrensenceApiController
             }
 
             if ($isEarlier) {
-                $employeePresence->extended_time = $this->diffTimeMinusFormatted(Carbon::parse($presenceLocation->max_hour), $employeePresence->time_out);
+                $employeePresence->extended_time = $this->diffTimeFormatted($employeePresence->time_out, Carbon::parse($presenceLocation->min_hour));
                 $employeePresence->note = "*Earlier check out !, need admin verification \n\n $employeePresence->note";
                 $employeePresence->status_by_admin = 'pending';
             }

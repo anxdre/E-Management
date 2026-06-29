@@ -67,7 +67,21 @@ return [
     |
     */
 
-    'timezone' => env('APP_TIMEZONE', 'UTC'),
+    'timezone' => 'UTC',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Display Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Timezone used for interpreting admin web form inputs. This is separate
+    | from the internal UTC timezone — changing it only affects how admin-entered
+    | times are converted to UTC for storage. Set to match the deployment region
+    | (e.g., Asia/Jakarta for WIB, Asia/Jayapura for WIT).
+    |
+    */
+
+    'admin_timezone' => env('ADMIN_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------

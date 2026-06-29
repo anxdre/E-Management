@@ -164,19 +164,19 @@ class EmployeePresenceController extends Controller
             $employeePresence->attachment = "$path/$filename";
         }
 
-        $employeePresence->time_in = Carbon::parse($request->time_in)->timezone('Asia/Jakarta');
-        $employeePresence->time_out = Carbon::parse($request->time_out)->timezone('Asia/Jakarta');
+        $employeePresence->time_in = Carbon::parse($request->time_in, config('app.admin_timezone'))->setTimezone('UTC');
+        $employeePresence->time_out = Carbon::parse($request->time_out, config('app.admin_timezone'))->setTimezone('UTC');
 //        $employeePresence->presence_verification_id = $verificationCode->id;
 
 
         $isLimit = false;
         $isEarlier = false;
         if ($presenceLocation->max_hour) {
-            $isLimit = Carbon::parse($employeePresence->time_out)->diffInHours(Carbon::parse($employeePresence->time_out), true) > $presenceLocation->max_hour;
+            $isLimit = Carbon::parse($employeePresence->time_in)->diffInHours(Carbon::parse($employeePresence->time_out), true) > $presenceLocation->max_hour;
         }
 
         if ($presenceLocation->min_hour) {
-            $isEarlier = Carbon::parse($employeePresence->time_out)->diffInHours(Carbon::parse($employeePresence->time_out)) < $presenceLocation->min_hour;
+            $isEarlier = Carbon::parse($employeePresence->time_in)->diffInHours(Carbon::parse($employeePresence->time_out)) < $presenceLocation->min_hour;
         }
 
         if ($isLimit) {
@@ -184,7 +184,7 @@ class EmployeePresenceController extends Controller
         }
 
         if ($isEarlier) {
-            $employeePresence->extended_time = Carbon::parse($this->diffTimeMinusFormatted(Carbon::parse($presenceLocation->max_hour), Carbon::parse($employeePresence->time_out)));
+            $employeePresence->extended_time = $this->diffTimeFormatted(Carbon::parse($employeePresence->time_out), Carbon::parse($presenceLocation->min_hour));
         }
 
         if (!$employeePresence->save()) {
