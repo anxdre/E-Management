@@ -61,7 +61,7 @@ class PrensenceApiController
     }
 
 
-    #[Get('/{user}/latest', '.all', ['auth:sanctum'])]
+    #[Get('/{user}/latest', '.latest', ['auth:sanctum'])]
     public function getLastestHistory(request $request, User $user)
     {
         $request->validate(['mst_presence_location_id' => 'nullable|exists:mst_presence_locations,id']);
@@ -77,7 +77,7 @@ class PrensenceApiController
             ->first();
 
         if (!$data) {
-            return new JsonBody(null, 'No presence history found', 200);
+            return new JsonBody((object)[], 'No presence history found', 200);
         }
 
         $diff = Carbon::parse($data->time_in)->diff(Carbon::now());
@@ -142,7 +142,7 @@ class PrensenceApiController
                     return new JsonBody([], 'Belum waktunya absen masuk, tunggu sampai jam ' . $startTimeToday->format('H:i:s'), 422);
                 }
             }
-            if ($historyAttendance && ($historyAttendance->time_in && !$historyAttendance->time_out) || $historyAttendance->mst_presence_location_id != $presenceLocation->id) {
+            if ($historyAttendance && (($historyAttendance->time_in && !$historyAttendance->time_out) || $historyAttendance->mst_presence_location_id != $presenceLocation->id)) {
                 return new JsonBody([], 'Mohon check-out di lokasi anda check-in terlebih dahulu', 403);
             }
             if ($presenceLocation->end_hour){
@@ -156,7 +156,7 @@ class PrensenceApiController
         }
 
         if ($request->status == 'out' && $user->isEmployee()) {
-            if ($historyAttendance && ($historyAttendance->time_in && $historyAttendance->time_out) || $historyAttendance->mst_presence_location_id != $presenceLocation->id) {
+            if (!$historyAttendance || $historyAttendance->time_out || $historyAttendance->mst_presence_location_id != $presenceLocation->id) {
                 return new JsonBody([], 'Data check-in tidak terdeteksi', 403);
             }
 
