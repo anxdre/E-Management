@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Prefix('Presence'), Name('api-presence'), Middleware('auth:sanctum')]
 class PrensenceApiController
@@ -239,6 +240,22 @@ class PrensenceApiController
         }
 
         return new JsonBody($employeePresence, 'Success');
+    }
+
+    #[Get('api/attachment/download/{id}', '.api.download.attachment', ['auth:sanctum'])]
+    public function downloadAttachment(int $id): StreamedResponse
+    {
+        $presence = PresenceEmployee::query()->findOrFail($id);
+
+        if ($presence->mst_user_id !== Auth::id()) {
+            abort(403, 'Forbidden');
+        }
+
+        if (!$presence->attachment || !Storage::exists("public/{$presence->attachment}")) {
+            abort(404, 'File not found');
+        }
+
+        return Storage::download("public/{$presence->attachment}", basename($presence->attachment));
     }
 
     #[Get('api/export/excel', '.api.export.excel', ['auth:sanctum'])]
