@@ -92,9 +92,10 @@ routes/
 | email | unique | |
 | password | hashed | |
 | type | string | `company`, `employee`, `superadmin` |
-| mst_company_id | FK→mst_users.id | Self-referencing: company=null, employee→company |
 | mst_user_detail_id | FK→mst_user_details.id | |
 | is_suspended | bool | default false |
+
+> **`mst_company_id` column DROPPED** via migration `2026_06_18_000002`. Employee-to-company relationship now resolved through `mst_company_groups.mst_user_id` (the company user that owns the group). Employee belongs to company via: `employee → pivot_group_has_users → CompanyGroup (mst_user_id = company ID)`.
 
 ### `mst_user_details`
 id, fullname, phone (unique), address, picture_profile
@@ -134,7 +135,7 @@ Extended: device_name, device_type, device_token — Sanctum token untuk mobile 
 
 ### Relasi Kunci
 - **User** → UserDetail (1:1 via mst_user_detail_id)
-- **User** → User (self: mst_company_id, company hasMany employees)
+- **CompanyGroup** → User (owner: mst_user_id — company yang memiliki grup)
 - **User** ↔ CompanyGroup (many-to-many via pivot_group_has_users)
 - **User** → PresenceEmployee (one-to-many via mst_user_id)
 - **PresenceLocation** → PresenceVerification (one-to-many)
@@ -253,3 +254,4 @@ Extended: device_name, device_type, device_token — Sanctum token untuk mobile 
 16. **Geocoder `flyTo: false`** — Geocoder internal `flyTo` fires sebelum `result` event. Harus `flyTo: false` di options, explicit `globalMap.flyTo()` di `result` event handler.
 17. **Geolokasi di parent, bukan MapView** — MapView tidak punya konteks create vs edit mode. Parent `PresenceLocationDetail.vue` handle geolokasi via `tryOnBeforeMount(() => { if(dataFromServer) return; getCurrentLocation() })`. MapView cuma punya tombol "Get my location" manual (maplibre IControl di top-right).
 18. **`max_hour` di form PresenceLocation adalah TIME string** — Bukan number. Default `null`, harus diisi via TimePicker (format `"HH:mm"`). Jangan set number (crash `value.split()` di TimePicker).
+19. **`mst_company_id` dihapus** — Migration `2026_06_18_000002` drop column `mst_company_id` dari `mst_users`. Relasi employee→company sekarang lewat groups: `employee → pivot_group_has_users → CompanyGroup.mst_user_id`. `LocationApiController` derive company dari auth user, bukan dari request param. Flutter `location_service.dart` tidak perlu kirim `company_id`.
