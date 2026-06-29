@@ -69,6 +69,7 @@ class PrensenceApiController
         $data = PresenceEmployee::query()
             ->where('mst_user_id', $user->id)
             ->where('time_out', null)
+            ->where('time_in', '>=', Carbon::now()->subDay())
             ->when(!empty($request->location_id), function ($query) use ($request) {
                 return $query->where('mst_presence_location_id', $request->get('location_id'));
             })
@@ -121,6 +122,8 @@ class PrensenceApiController
         $historyAttendance = PresenceEmployee::query()
             ->where('mst_user_id', $user->id)
             ->where('mst_presence_location_id', $presenceLocation->id)
+            ->whereNull('time_out')
+            ->where('time_in', '>=', Carbon::now()->subDay())
             ->latest('created_at')
             ->first();
 
