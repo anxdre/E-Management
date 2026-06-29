@@ -109,6 +109,7 @@ class PrensenceApiController
         $verificationCode = PresenceVerification::query()
             ->select(['verification_hash', 'id'])
             ->where('mst_presence_location_id', $request->get('location_id'))
+            ->latest()
             ->first();
 
         if ($verificationCode == null) {
